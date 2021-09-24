@@ -4,6 +4,13 @@ Public API for Holo's match service
 Endpoints:
 
 GET
+`/`
+
+Returns status of connection to db
+
+#### `200 OK`
+
+GET
 `/host/statistics/Hc7179WYizSRLRSb6DWgZf4dhw5b0ACdlvAw3WYH8`
 
 #### `200 OK`
@@ -53,3 +60,7 @@ GET
   }
 ]
 ```
+
+# Prerequisites
+
+Binary requires `MONGO_URI` env var representing full mongo db uri in a format: `mongodb+srv://<user>:<pass>@cluster0.<cluster>.mongodb.net/`.
