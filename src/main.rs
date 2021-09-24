@@ -9,9 +9,9 @@ async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
     db::ping_database(&pool.db).await
 }
 
-#[get("/statistics/<id>")]
-async fn statistics(id: String, pool: &State<db::AppDbPool>) -> Result<String> {
-    db::host_statistics(id, &pool.db)
+#[get("/statistics/<name>")]
+async fn statistics(name: String, pool: &State<db::AppDbPool>) -> Result<Option<String>> {
+    db::host_statistics(name, &pool.db).await
 }
 
 #[rocket::main]

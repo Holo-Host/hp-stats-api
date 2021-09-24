@@ -1,7 +1,7 @@
 // use rocket::serde::{Serialize};
 
-use rocket::response::Debug;
 use mongodb::error::Error;
+use rocket::response::Debug;
 
 // [rocket::response::Debug](https://api.rocket.rs/v0.5-rc/rocket/response/struct.Debug.html) implements Responder to Error
 pub type Result<T, E = Debug<Error>> = std::result::Result<T, E>;
@@ -21,5 +21,3 @@ pub type Result<T, E = Debug<Error>> = std::result::Result<T, E>;
 //     alphaTest: bool,
 //     assignedTo: Option<String>
 // }
-
-

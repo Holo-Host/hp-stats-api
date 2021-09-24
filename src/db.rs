@@ -1,5 +1,5 @@
-use mongodb::bson::doc;
-use mongodb::{Client, Database};
+use mongodb::bson::{doc, Document};
+use mongodb::{Client, Database, Collection};
 use std::env::var;
 
 use crate::types::Result;
@@ -22,12 +22,21 @@ pub async fn init_db_pool() -> AppDbPool {
 }
 
 // Ping database and return a string if successful
+// Timeouts to 500 error response
 pub async fn ping_database(db: &Database) -> Result<String> {
     db.run_command(doc! {"ping": 1}, None).await?;
     Ok(format!("Connected to db."))
 }
 
+// Find a value of uptime for host identified by its name in a collection `performance_summary`
+// Returns 404 if not found
+pub async fn host_statistics(name: String, db: &Database) -> Result<Option<String>> {
+    let records: Collection<Document> = db.collection("performance_summary");
 
-pub fn host_statistics(id: String, _db: &Database) -> Result<String> {
-    Ok(id)
+    if let Some(record) = records.find_one(Some(doc! {"name": name}), None).await?{
+        if let Ok(val) = record.get_str("uptime") {
+            return Ok(Some(val.to_string()))
+        }
+    }
+    Ok(None)
 }
