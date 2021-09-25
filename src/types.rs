@@ -1,10 +1,52 @@
-// use rocket::serde::{Serialize};
+use rocket::serde::{Deserialize, Serialize};
 
-use mongodb::error::Error;
+use bson::oid::ObjectId;
+use mongodb::{bson, error::Error};
 use rocket::response::Debug;
 
 // [rocket::response::Debug](https://api.rocket.rs/v0.5-rc/rocket/response/struct.Debug.html) implements Responder to Error
 pub type Result<T, E = Debug<Error>> = std::result::Result<T, E>;
+
+// Return type for /network/capacity endpoint
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct Capacity {
+    pub total_hosts: u16,
+    pub read_only: u16,
+    pub source_chain: u16,
+}
+
+impl Capacity {
+    pub fn calc_capacity(&mut self, uptime: f32) {
+        self.total_hosts += 1;
+        if uptime >= 0.5 {
+            self.read_only += 1
+        };
+        if uptime >= 0.9 {
+            self.source_chain += 1
+        };
+    }
+}
+
+// Data schema in `performance_summary` collection
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct Performance {
+    _id: ObjectId,
+    name: String,
+    description: String,
+    physicalAddress: String,
+    zt_ipaddress: String,
+    created_at: u64,
+    pub uptime: f32,
+}
+
+// Return type for /host/statistics endpoint
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct Uptime {
+    pub uptime: f32,
+}
 
 // #[derive(Serialize)]
 // #[serde(crate = "rocket::serde")]

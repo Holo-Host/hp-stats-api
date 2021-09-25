@@ -1,8 +1,9 @@
+use rocket::serde::json::Json;
 use rocket::{self, get, State};
 
 mod db;
 mod types;
-use types::Result;
+use types::{Capacity, Result, Uptime};
 
 #[get("/")]
 async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
@@ -10,8 +11,16 @@ async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
 }
 
 #[get("/statistics/<name>")]
-async fn statistics(name: String, pool: &State<db::AppDbPool>) -> Result<Option<String>> {
-    db::host_statistics(name, &pool.db).await
+async fn statistics(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json<Uptime>>> {
+    if let Some(uptime) = db::host_uptime(name, &pool.db).await {
+        return Ok(Some(Json(uptime)))
+    }
+    Ok(None)
+}
+
+#[get("/capacity")]
+async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
+    Ok(Json(db::network_capacity(&pool.db).await?))
 }
 
 #[rocket::main]
@@ -20,6 +29,7 @@ async fn main() -> Result<(), rocket::Error> {
         .manage(db::init_db_pool().await)
         .mount("/", rocket::routes![index])
         .mount("/host/", rocket::routes![statistics])
+        .mount("/network/", rocket::routes![capacity])
         .launch()
         .await
 }

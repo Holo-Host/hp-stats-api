@@ -1,8 +1,9 @@
-use mongodb::bson::{doc, Document};
-use mongodb::{Client, Database, Collection};
+use mongodb::bson::doc;
+use mongodb::{Client, Collection, Database};
+use rocket::futures::StreamExt;
 use std::env::var;
 
-use crate::types::Result;
+use crate::types::{Capacity, Performance, Result, Uptime};
 
 // AppDbPool is managed by Rocket as a State, which means it is available across threads.
 // Type mongodb::Database (starting v2.0.0 of mongodb driver) represents a connection pool to db,
@@ -11,7 +12,7 @@ pub struct AppDbPool {
     pub db: Database,
 }
 
-// Initialize database and return in form of a AppDbPool
+// Initialize database and return in form of an AppDbPool
 pub async fn init_db_pool() -> AppDbPool {
     let mongo_uri: String = var("MONGO_URI").expect("MONGO_URI must be set in the env");
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
@@ -30,13 +31,35 @@ pub async fn ping_database(db: &Database) -> Result<String> {
 
 // Find a value of uptime for host identified by its name in a collection `performance_summary`
 // Returns 404 if not found
-pub async fn host_statistics(name: String, db: &Database) -> Result<Option<String>> {
-    let records: Collection<Document> = db.collection("performance_summary");
+pub async fn host_uptime(name: String, db: &Database) -> Option<Uptime> {
+    let records: Collection<Performance> = db.collection("performance_summary");
 
-    if let Some(record) = records.find_one(Some(doc! {"name": name}), None).await?{
-        if let Ok(val) = record.get_str("uptime") {
-            return Ok(Some(val.to_string()))
-        }
+    if let Some(host) = records.find_one(Some(doc! {"name": name}), None).await.unwrap() {
+        return Some(Uptime {
+            uptime: host.uptime,
+        });
     }
-    Ok(None)
+    None
+}
+
+// Calculate network capacity from all the records in `performance_summary` collection
+pub async fn network_capacity(db: &Database) -> Result<Capacity> {
+    let records: Collection<Performance> = db.collection("performance_summary");
+    let cursor = records.find(None, None).await?;
+
+    // cursor is a stream so it requires fold() from StreamExt
+    let result = cursor.fold(
+        Capacity {
+            total_hosts: 0,
+            read_only: 0,
+            source_chain: 0,
+        },
+        |mut acc, el| async move {
+            if let Ok(el_unwrapped) = el {
+                acc.calc_capacity(el_unwrapped.uptime);
+            }
+            acc
+        },
+    );
+    Ok(result.await)
 }
