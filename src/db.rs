@@ -1,9 +1,10 @@
 use mongodb::bson::doc;
 use mongodb::{Client, Collection, Database};
-use rocket::futures::StreamExt;
+use rocket::futures::TryStreamExt;
+use rocket::response::Debug;
 use std::env::var;
 
-use crate::types::{Capacity, Performance, Result, Uptime};
+use crate::types::{Capacity, Host, Performance, Result, Uptime};
 
 // AppDbPool is managed by Rocket as a State, which means it is available across threads.
 // Type mongodb::Database (starting v2.0.0 of mongodb driver) represents a connection pool to db,
@@ -48,18 +49,33 @@ pub async fn network_capacity(db: &Database) -> Result<Capacity> {
     let cursor = records.find(None, None).await?;
 
     // cursor is a stream so it requires fold() from StreamExt
-    let result = cursor.fold(
+    cursor.try_fold(
         Capacity {
             total_hosts: 0,
             read_only: 0,
             source_chain: 0,
         },
         |mut acc, el| async move {
-            if let Ok(el_unwrapped) = el {
-                acc.calc_capacity(el_unwrapped.uptime);
-            }
-            acc
+            acc.calc_capacity(el.uptime);
+            Ok(acc)
         },
-    );
-    Ok(result.await)
+    ).await.map_err(Debug)
+}
+
+pub async fn list_all_hosts(db: &Database) -> Result<Vec<Host>> {
+    let records: Collection<Host> = db.collection("performance_summary");
+
+    let latest_timestamp: u64 = 1631612888888;
+
+    let mut result: Vec<Host> = Vec::new();
+
+    // if let Some(host) = records.find_one(Some(doc! {"name": name}), None).await.unwrap() {
+    //     latest_timestamp = host.timestamp;
+    // } else {
+    //     return Ok(Vec::new())
+    // }
+
+    let cursor = records.find(Some(doc! {"timestamp": latest_timestamp}), None).await?;
+
+    cursor.try_collect().await.map_err(Debug)
 }

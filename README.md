@@ -39,7 +39,7 @@ GET
 ```
 
 GET
-`/network/hosts`
+`/host/list`
 
 #### `200 OK`
 
