@@ -37,7 +37,7 @@ pub struct Performance {
     description: String,
     physicalAddress: String,
     zt_ipaddress: String,
-    created_at: u64,
+    created_at: i64,
     pub uptime: f32,
 }
 
@@ -51,15 +51,16 @@ pub struct Uptime {
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct Host {
+    _id: ObjectId,
     name: String,
     IP: String,
-    timestamp: u64,
+    pub timestamp: i64,
     sshSuccess: bool,
     holoNetwork: Option<String>,
     channel: Option<String>,
     holoportModel: Option<String>,
     hostingInfo: Option<String>,
     error: Option<String>,
-    alphaTest: bool,
-    assignedTo: Option<String>
+    // alphaTest: bool,
+    // assignedTo: Option<String>
 }

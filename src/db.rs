@@ -35,7 +35,11 @@ pub async fn ping_database(db: &Database) -> Result<String> {
 pub async fn host_uptime(name: String, db: &Database) -> Option<Uptime> {
     let records: Collection<Performance> = db.collection("performance_summary");
 
-    if let Some(host) = records.find_one(Some(doc! {"name": name}), None).await.unwrap() {
+    if let Some(host) = records
+        .find_one(Some(doc! {"name": name}), None)
+        .await
+        .unwrap()
+    {
         return Some(Uptime {
             uptime: host.uptime,
         });
@@ -49,33 +53,37 @@ pub async fn network_capacity(db: &Database) -> Result<Capacity> {
     let cursor = records.find(None, None).await?;
 
     // cursor is a stream so it requires fold() from StreamExt
-    cursor.try_fold(
-        Capacity {
-            total_hosts: 0,
-            read_only: 0,
-            source_chain: 0,
-        },
-        |mut acc, el| async move {
-            acc.calc_capacity(el.uptime);
-            Ok(acc)
-        },
-    ).await.map_err(Debug)
+    cursor
+        .try_fold(
+            Capacity {
+                total_hosts: 0,
+                read_only: 0,
+                source_chain: 0,
+            },
+            |mut acc, el| async move {
+                acc.calc_capacity(el.uptime);
+                Ok(acc)
+            },
+        )
+        .await
+        .map_err(Debug)
 }
 
 pub async fn list_all_hosts(db: &Database) -> Result<Vec<Host>> {
-    let records: Collection<Host> = db.collection("performance_summary");
+    let records: Collection<Host> = db.collection("holoports_status");
 
-    let latest_timestamp: u64 = 1631612888888;
-
-    let mut result: Vec<Host> = Vec::new();
-
-    // if let Some(host) = records.find_one(Some(doc! {"name": name}), None).await.unwrap() {
-    //     latest_timestamp = host.timestamp;
-    // } else {
-    //     return Ok(Vec::new())
-    // }
-
-    let cursor = records.find(Some(doc! {"timestamp": latest_timestamp}), None).await?;
-
-    cursor.try_collect().await.map_err(Debug)
+    if let Some(host) = records
+        .find_one(
+            Some(doc! {"name": "113ort34rkse167oi357pph5f03owr63bvsvq64fysabaaqlp4"}),
+            None,
+        )
+        .await?
+    {
+        let cursor = records
+            .find(Some(doc! {"timestamp": host.timestamp}), None)
+            .await?;
+        return cursor.try_collect().await.map_err(Debug);
+    } else {
+        return Ok(Vec::new());
+    }
 }

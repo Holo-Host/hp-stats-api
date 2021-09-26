@@ -13,7 +13,7 @@ async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
 #[get("/statistics/<name>")]
 async fn statistics(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json<Uptime>>> {
     if let Some(uptime) = db::host_uptime(name, &pool.db).await {
-        return Ok(Some(Json(uptime)))
+        return Ok(Some(Json(uptime)));
     }
     Ok(None)
 }
