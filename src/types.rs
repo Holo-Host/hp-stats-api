@@ -35,7 +35,8 @@ pub struct Performance {
     _id: ObjectId,
     name: String,
     description: String,
-    physicalAddress: String,
+    #[serde(rename = "physicalAddress")]
+    physical_address: String,
     zt_ipaddress: String,
     created_at: i64,
     pub uptime: f32,
@@ -48,19 +49,24 @@ pub struct Uptime {
     pub uptime: f32,
 }
 
+// Data schema in `holoports_status` collection
+// and return type for /host/list endpoint
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
 pub struct Host {
+    #[serde(skip)]
     _id: ObjectId,
     name: String,
-    IP: String,
+    #[serde(rename = "IP")]
+    ip: String,
     pub timestamp: i64,
-    sshSuccess: bool,
-    holoNetwork: Option<String>,
+    ssh_success: bool,
+    holo_network: Option<String>,
     channel: Option<String>,
-    holoportModel: Option<String>,
-    hostingInfo: Option<String>,
+    holoport_model: Option<String>,
+    hosting_info: Option<String>,
     error: Option<String>,
-    // alphaTest: bool,
-    // assignedTo: Option<String>
+    alpha_test: Option<bool>,
+    assigned_to: Option<String>,
 }
