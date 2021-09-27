@@ -57,7 +57,7 @@ pub struct Uptime {
 pub struct Host {
     #[serde(skip)]
     _id: ObjectId,
-    name: String,
+    pub name: String,
     #[serde(rename = "IP")]
     ip: String,
     pub timestamp: i64,
@@ -67,6 +67,15 @@ pub struct Host {
     holoport_model: Option<String>,
     hosting_info: Option<String>,
     error: Option<String>,
-    alpha_test: Option<bool>,
-    assigned_to: Option<String>,
+    pub alpha_test: Option<bool>,
+    pub assigned_to: Option<String>,
+}
+
+// Data schema in `holoports_assignment` collection
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct Assignment {
+    pub name: String,
+    pub assigned_to: String,
 }
