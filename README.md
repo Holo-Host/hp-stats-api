@@ -18,17 +18,17 @@ GET
 ```json
 [
   {
-    name:"5j60okm4zt9elo8gu5u4qgh2bv3gusdo7uo48nwdb2d18wk59h",
-    IP:"172.26.29.50",
-    timestamp:1631089852191,
-    sshSuccess:true,
-    holoNetwork:"flexNet",
-    channel:"923",
-    holoportModel:"holoport-plus",
-    hostingInfo:"{\"totalSourceChains\":0,\"currentTotalStorage\":0,\"usage\":{\"cpu\":0}}",
-    error:null,
-    alphaTest: true,
-    assignedTo: null
+    "name": "string",
+    "IP": "string",
+    "timestamp": 0,
+    "sshSuccess": true,
+    "holoNetwork": "string",
+    "channel": "string",
+    "holoportModel": "string",
+    "hostingInfo": "string",
+    "error": "string",
+    "alphaTest": true,
+    "assignedTo": "string"
   }
 ]
 ```
@@ -59,4 +59,4 @@ GET
 
 # Prerequisites
 
-Binary requires `MONGO_URI` env var representing full mongo db uri in a format: `mongodb+srv://<user>:<pass>@cluster0.<cluster>.mongodb.net/`.
+For connecting to database binary requires `MONGO_URI` environmental variable which is representing full mongo db uri in a format: `mongodb+srv://<user>:<pass>@cluster0.<cluster>.mongodb.net/`.
