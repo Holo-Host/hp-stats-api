@@ -17,7 +17,7 @@ pub struct Capacity {
 }
 
 impl Capacity {
-    pub fn calc_capacity(&mut self, uptime: f32) {
+    pub fn add_host(&mut self, uptime: f32) {
         self.total_hosts += 1;
         if uptime >= 0.5 {
             self.read_only += 1

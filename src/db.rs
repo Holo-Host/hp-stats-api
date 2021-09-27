@@ -1,4 +1,5 @@
 use mongodb::bson::doc;
+use mongodb::options::FindOneOptions;
 use mongodb::{Client, Collection, Database};
 use rocket::futures::TryStreamExt;
 use rocket::response::Debug;
@@ -52,7 +53,7 @@ pub async fn network_capacity(db: &Database) -> Result<Capacity> {
     let records: Collection<Performance> = db.collection("performance_summary");
     let cursor = records.find(None, None).await?;
 
-    // cursor is a stream so it requires fold() from StreamExt
+    // cursor is a stream so it requires try_fold() from TryStreamExt
     cursor
         .try_fold(
             Capacity {
@@ -60,25 +61,25 @@ pub async fn network_capacity(db: &Database) -> Result<Capacity> {
                 read_only: 0,
                 source_chain: 0,
             },
-            |mut acc, el| async move {
-                acc.calc_capacity(el.uptime);
-                Ok(acc)
+            |mut total_capacity, performance| async move {
+                total_capacity.add_host(performance.uptime);
+                Ok(total_capacity)
             },
         )
         .await
         .map_err(Debug)
 }
 
+// Return all the hosts stored in `holoports_status` collection
 pub async fn list_all_hosts(db: &Database) -> Result<Vec<Host>> {
     let records: Collection<Host> = db.collection("holoports_status");
 
-    if let Some(host) = records
-        .find_one(
-            Some(doc! {"name": "113ort34rkse167oi357pph5f03owr63bvsvq64fysabaaqlp4"}),
-            None,
-        )
-        .await?
-    {
+    // Build find_one() option that returns max value of timestamp field
+    let search_options = FindOneOptions::builder()
+        .sort(Some(doc! {"timestamp": -1}))
+        .build();
+
+    if let Some(host) = records.find_one(None, search_options).await? {
         let cursor = records
             .find(Some(doc! {"timestamp": host.timestamp}), None)
             .await?;
