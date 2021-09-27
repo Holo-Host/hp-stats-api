@@ -10,8 +10,8 @@ async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
     db::ping_database(&pool.mongo).await
 }
 
-#[get("/statistics/<name>")]
-async fn statistics(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json<Uptime>>> {
+#[get("/<name>/uptime")]
+async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json<Uptime>>> {
     if let Some(uptime) = db::host_uptime(name, &pool.mongo).await {
         return Ok(Some(Json(uptime)));
     }
@@ -33,7 +33,7 @@ async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .manage(db::init_db_pool().await)
         .mount("/", rocket::routes![index])
-        .mount("/host/", rocket::routes![statistics, list_all])
+        .mount("/hosts/", rocket::routes![uptime, list_all])
         .mount("/network/", rocket::routes![capacity])
         .launch()
         .await

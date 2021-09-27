@@ -101,15 +101,15 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<Host>> {
             .await?;
 
         // Update fields alpha_test and assigned_to based on the content of assignment_map
-        let cursor_updated = cursor.try_filter_map(|mut x| async {
-            if let Some(assigned_to) = assignment_map.get(&x.name) {
-                x.alpha_test = Some(true);
-                x.assigned_to = Some(assigned_to.to_string());
+        let cursor_extended = cursor.try_filter_map(|mut host| async {
+            if let Some(assigned_to) = assignment_map.get(&host.name) {
+                host.alpha_test = Some(true);
+                host.assigned_to = Some(assigned_to.to_string());
             }
-            return Ok(Some(x));
+            return Ok(Some(host));
         });
 
-        return cursor_updated.try_collect().await.map_err(Debug);
+        return cursor_extended.try_collect().await.map_err(Debug);
     } else {
         return Ok(Vec::new());
     }

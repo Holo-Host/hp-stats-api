@@ -11,35 +11,7 @@ Returns status of connection to db
 #### `200 OK`
 
 GET
-`/host/statistics/Hc7179WYizSRLRSb6DWgZf4dhw5b0ACdlvAw3WYH8`
-
-#### `200 OK`
-
-```json
-{
-  "uptime": 0.95
-}
-```
-
-GET
-`/network/capacity`
-
-#### `200 OK`
-
-`total_hosts`: All hosts in database
-`read_only`: Hosts that have at least 50% uptime in last 7 days
-`source_chain`: Hosts that have at least 90% uptime in last 7 days
-
-```json
-{
-  "total_hosts": 2100,
-  "read_only": 1341,
-  "source_chain": 300
-}
-```
-
-GET
-`/host/list`
+`/hosts/list`
 
 #### `200 OK`
 
@@ -59,6 +31,30 @@ GET
     assignedTo: null
   }
 ]
+```
+
+GET
+`/hosts/<name>/uptime`
+
+#### `200 OK`
+
+```json
+{
+  "uptime": 0.95
+}
+```
+
+GET
+`/network/capacity`
+
+#### `200 OK`
+
+```json
+{
+  "total_hosts": 2100, // All hosts in database
+  "read_only": 1341, // Hosts that have at least 50% uptime in last 7 days
+  "source_chain": 300 // Hosts that have at least 90% uptime in last 7 days
+}
 ```
 
 # Prerequisites

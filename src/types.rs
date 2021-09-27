@@ -42,7 +42,7 @@ pub struct Performance {
     pub uptime: f32,
 }
 
-// Return type for /host/statistics endpoint
+// Return type for /hosts/uptime endpoint
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct Uptime {
@@ -50,7 +50,7 @@ pub struct Uptime {
 }
 
 // Data schema in `holoports_status` collection
-// and return type for /host/list endpoint
+// and return type for /hosts/list endpoint
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
