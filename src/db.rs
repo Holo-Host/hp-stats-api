@@ -35,8 +35,9 @@ pub async fn ping_database(db: &Client) -> Result<String> {
 // Find a value of uptime for host identified by its name in a collection `performance_summary`
 // Returns 404 if not found
 pub async fn host_uptime(name: String, db: &Client) -> Option<Uptime> {
-    let records: Collection<Performance> =
-        db.database("host_statistics").collection("performance_summary");
+    let records: Collection<Performance> = db
+        .database("host_statistics")
+        .collection("performance_summary");
 
     if let Some(host) = records
         .find_one(Some(doc! {"name": name}), None)
@@ -52,8 +53,9 @@ pub async fn host_uptime(name: String, db: &Client) -> Option<Uptime> {
 
 // Calculate network capacity from all the records in `performance_summary` collection
 pub async fn network_capacity(db: &Client) -> Result<Capacity> {
-    let records: Collection<Performance> =
-        db.database("host_statistics").collection("performance_summary");
+    let records: Collection<Performance> = db
+        .database("host_statistics")
+        .collection("performance_summary");
     let cursor = records.find(None, None).await?;
 
     // cursor is a stream so it requires try_fold() from TryStreamExt
@@ -76,8 +78,9 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
 // Return all the hosts stored in `holoports_status` collection
 pub async fn list_all_hosts(db: &Client) -> Result<Vec<Host>> {
     // Retrieve and store in memory all holoport assignments
-    let hp_assignment: Collection<Assignment> =
-        db.database("host_statistics").collection("holoports_assignment");
+    let hp_assignment: Collection<Assignment> = db
+        .database("host_statistics")
+        .collection("holoports_assignment");
 
     let mut cursor = hp_assignment.find(None, None).await?;
 
@@ -88,7 +91,9 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<Host>> {
     }
 
     // Retrieve all holoport statuses and format for an API response
-    let hp_status: Collection<Host> = db.database("host_statistics").collection("holoports_status");
+    let hp_status: Collection<Host> = db
+        .database("host_statistics")
+        .collection("holoports_status");
 
     // Build find_one() option that returns max value of timestamp field
     let search_options = FindOneOptions::builder()
