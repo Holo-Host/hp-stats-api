@@ -26,7 +26,7 @@ pub async fn init_db_pool() -> AppDbPool {
 // Ping database and return a string if successful
 // Timeouts to 500 error response
 pub async fn ping_database(db: &Client) -> Result<String> {
-    db.database("pjs-test")
+    db.database("host_statistics")
         .run_command(doc! {"ping": 1}, None)
         .await?;
     Ok(format!("Connected to db."))
@@ -36,7 +36,7 @@ pub async fn ping_database(db: &Client) -> Result<String> {
 // Returns 404 if not found
 pub async fn host_uptime(name: String, db: &Client) -> Option<Uptime> {
     let records: Collection<Performance> =
-        db.database("pjs-test").collection("performance_summary");
+        db.database("host_statistics").collection("performance_summary");
 
     if let Some(host) = records
         .find_one(Some(doc! {"name": name}), None)
@@ -53,7 +53,7 @@ pub async fn host_uptime(name: String, db: &Client) -> Option<Uptime> {
 // Calculate network capacity from all the records in `performance_summary` collection
 pub async fn network_capacity(db: &Client) -> Result<Capacity> {
     let records: Collection<Performance> =
-        db.database("pjs-test").collection("performance_summary");
+        db.database("host_statistics").collection("performance_summary");
     let cursor = records.find(None, None).await?;
 
     // cursor is a stream so it requires try_fold() from TryStreamExt
@@ -77,7 +77,7 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
 pub async fn list_all_hosts(db: &Client) -> Result<Vec<Host>> {
     // Retrieve and store in memory all holoport assignments
     let hp_assignment: Collection<Assignment> =
-        db.database("pjs-test-2").collection("holoports_assignment");
+        db.database("host_statistics").collection("holoports_assignment");
 
     let mut cursor = hp_assignment.find(None, None).await?;
 
@@ -88,7 +88,7 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<Host>> {
     }
 
     // Retrieve all holoport statuses and format for an API response
-    let hp_status: Collection<Host> = db.database("pjs-test").collection("holoports_status");
+    let hp_status: Collection<Host> = db.database("host_statistics").collection("holoports_status");
 
     // Build find_one() option that returns max value of timestamp field
     let search_options = FindOneOptions::builder()
