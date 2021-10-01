@@ -3,12 +3,11 @@ Public API for Holo's match service
 
 Endpoints:
 
-GET
-`/`
-
-Returns status of connection to db
+#### GET `/`
 
 #### `200 OK`
+
+Text: status of connection to db
 
 GET
 `/hosts/list`
