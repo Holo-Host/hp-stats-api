@@ -1,5 +1,5 @@
 [package]
-name = "match-service-api-rust"
+name = "match-service-api"
 version = "0.1.0"
 authors = ["peeech <pj@imagine-nyc.com>"]
 edition = "2018"

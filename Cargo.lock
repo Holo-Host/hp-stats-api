@@ -750,7 +750,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "match-service-api-rust"
+name = "match-service-api"
 version = "0.1.0"
 dependencies = [
  "mongodb",

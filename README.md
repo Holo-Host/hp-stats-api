@@ -1,4 +1,4 @@
-# match-service-api-rust
+# match-service-api
 Public API for Holo's match service
 
 Endpoints:
