@@ -36,7 +36,7 @@ pub struct Performance {
     name: String,
     description: String,
     #[serde(rename = "physicalAddress")]
-    physical_address: String,
+    physical_address: Option<String>,
     zt_ipaddress: String,
     created_at: i64,
     pub uptime: f32,
@@ -60,7 +60,7 @@ pub struct Host {
     pub name: String,
     #[serde(rename = "IP")]
     ip: String,
-    pub timestamp: i64,
+    pub timestamp: f64,
     ssh_success: bool,
     holo_network: Option<String>,
     channel: Option<String>,
