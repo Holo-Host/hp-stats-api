@@ -95,5 +95,4 @@ pub struct HostSummary {
 #[serde(rename_all = "camelCase")]
 pub struct Assignment {
     pub name: String,
-    pub assigned_to: String,
 }
