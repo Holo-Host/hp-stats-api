@@ -1,9 +1,10 @@
 use rocket::serde::json::Json;
 use rocket::{self, get, State};
+use mongodb::bson;
 
 mod db;
 mod types;
-use types::{Capacity, Host, Result, Uptime};
+use types::{Capacity, HostSummary, Result, Uptime};
 
 #[get("/")]
 async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
@@ -19,8 +20,13 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
 }
 
 #[get("/list")]
-async fn list_all(pool: &State<db::AppDbPool>) -> Result<Json<Vec<Host>>> {
+async fn list_all(pool: &State<db::AppDbPool>) -> Result<Json<Vec<HostSummary>>> {
     Ok(Json(db::list_all_hosts(&pool.mongo).await?))
+}
+
+#[get("/registered")]
+async fn list_registered(pool: &State<db::AppDbPool>) -> Result<Json<Vec<bson::Bson>>> {
+    Ok(Json(db::list_registered_hosts(&pool.mongo).await?))
 }
 
 #[get("/capacity")]
@@ -33,7 +39,7 @@ async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .manage(db::init_db_pool().await)
         .mount("/", rocket::routes![index])
-        .mount("/hosts/", rocket::routes![uptime, list_all])
+        .mount("/hosts/", rocket::routes![uptime, list_all, list_registered])
         .mount("/network/", rocket::routes![capacity])
         .launch()
         .await

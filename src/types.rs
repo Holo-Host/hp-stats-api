@@ -67,7 +67,25 @@ pub struct Host {
     holoport_model: Option<String>,
     hosting_info: Option<String>,
     error: Option<String>,
-    pub alpha_test: Option<bool>,
+    pub alpha_program: Option<bool>,
+    pub assigned_to: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct HostSummary {
+    pub _id: String,
+    #[serde(rename = "IP")]
+    ip: String,
+    pub timestamp: f64,
+    ssh_success: bool,
+    holo_network: Option<String>,
+    channel: Option<String>,
+    holoport_model: Option<String>,
+    hosting_info: Option<String>,
+    error: Option<String>,
+    pub alpha_program: Option<bool>,
     pub assigned_to: Option<String>,
 }
 

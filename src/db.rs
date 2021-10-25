@@ -1,12 +1,11 @@
-use mongodb::bson::doc;
-use mongodb::options::FindOneOptions;
+use mongodb::bson::{self, doc};
 use mongodb::{Client, Collection};
 use rocket::futures::TryStreamExt;
 use rocket::response::Debug;
 use std::collections::HashMap;
 use std::env::var;
 
-use crate::types::{Assignment, Capacity, Host, Performance, Result, Uptime};
+use crate::types::{Assignment, Capacity, Host, HostSummary, Performance, Result, Uptime};
 
 // AppDbPool is managed by Rocket as a State, which means it is available across threads.
 // Type mongodb::Database (starting v2.0.0 of mongodb driver) represents a connection pool to db,
@@ -29,7 +28,7 @@ pub async fn ping_database(db: &Client) -> Result<String> {
     db.database("host_statistics")
         .run_command(doc! {"ping": 1}, None)
         .await?;
-    Ok(format!("Connected to db."))
+    Ok(format!("Connected to db. v0.0.2"))
 }
 
 // Find a value of uptime for host identified by its name in a collection `performance_summary`
@@ -76,18 +75,18 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
 }
 
 // Return all the hosts stored in `holoports_status` collection
-pub async fn list_all_hosts(db: &Client) -> Result<Vec<Host>> {
+pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
     // Retrieve and store in memory all holoport assignments
     let hp_assignment: Collection<Assignment> = db
         .database("host_statistics")
-        .collection("holoports_assignment");
+        .collection("alpha_program_holoports");
 
     let mut cursor = hp_assignment.find(None, None).await?;
 
     let mut assignment_map = HashMap::new();
 
     while let Some(a) = cursor.try_next().await? {
-        assignment_map.insert(a.name, a.assigned_to);
+        assignment_map.insert(a.name, "Field N/A");
     }
 
     // Retrieve all holoport statuses and format for an API response
@@ -95,27 +94,59 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<Host>> {
         .database("host_statistics")
         .collection("holoports_status");
 
-    // Build find_one() option that returns max value of timestamp field
-    let search_options = FindOneOptions::builder()
-        .sort(Some(doc! {"timestamp": -1}))
-        .build();
-
-    if let Some(host) = hp_status.find_one(None, search_options).await? {
-        let cursor = hp_status
-            .find(Some(doc! {"timestamp": host.timestamp}), None)
-            .await?;
-
-        // Update fields alpha_test and assigned_to based on the content of assignment_map
-        let cursor_extended = cursor.try_filter_map(|mut host| async {
-            if let Some(assigned_to) = assignment_map.get(&host.name) {
-                host.alpha_test = Some(true);
-                host.assigned_to = Some(assigned_to.to_string());
+    let pipeline = vec![
+        doc! {
+            // only successful ssh results
+            "$match": {
+                "ssh_success": true
             }
-            return Ok(Some(host));
-        });
+        },
+        doc! {
+            // sort by timestamp, descending:
+            "$sort": {
+                "timestamp": -1
+            }
+        },
+        doc! {
+            "$group": {
+                "_id": "$name",
+                "ip": {"$first": "$ip"},
+                "timestamp": {"$first": "$timestamp"},
+                "ssh_success": true,
+                "holo_network": {"$first": "$holo_network"},
+                "channel": {"$first": "$channel"},
+                "holoport_model": {"$first": "$holoport_model"},
+                "hosting_info": {"$first": "$hosting_info"},
+                "error": {"$first": "$error"},
+            }
+        }
+    ];
+ 
+    let cursor= hp_status
+        .aggregate(pipeline, None)
+        .await?;
 
-        return cursor_extended.try_collect().await.map_err(Debug);
-    } else {
-        return Ok(Vec::new());
-    }
+    // Update fields alpha_test and assigned_to based on the content of assignment_map
+    let cursor_extended = cursor.try_filter_map(|host| async {
+        let mut host: HostSummary = bson::from_document(host)?;
+        if let Some(assigned_to) = assignment_map.get(&host._id) {
+            host.alpha_program = Some(true);
+            host.assigned_to = Some(assigned_to.to_string());
+        }
+        return Ok(Some(host));
+    });
+
+    return cursor_extended.try_collect().await.map_err(Debug);
+}
+
+
+pub async fn list_registered_hosts(db: &Client) -> Result<Vec<bson::Bson>> {
+    // Retrieve all holoport statuses and format for an API response
+    let hp_status: Collection<Host> = db
+        .database("host_statistics")
+        .collection("holoports_status");
+
+    return hp_status.distinct("name", None, None)
+    .await
+    .map_err(Debug);
 }
