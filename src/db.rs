@@ -110,13 +110,13 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
         doc! {
             "$group": {
                 "_id": "$name",
-                "ip": {"$first": "$IP"},
+                "IP": {"$first": "$IP"},
                 "timestamp": {"$first": "$timestamp"},
-                "ssh_success": {"$first": "$sshSuccess"},
-                "holo_network": {"$first": "$holoNetwork"},
+                "sshSuccess": {"$first": "$sshSuccess"},
+                "holoNetwork": {"$first": "$holoNetwork"},
                 "channel": {"$first": "$channel"},
-                "holoport_model": {"$first": "$holoportModel"},
-                "hosting_info": {"$first": "$hostingInfo"},
+                "holoportModel": {"$first": "$holoportModel"},
+                "hostingInfo": {"$first": "$hostingInfo"},
                 "error": {"$first": "$error"},
             }
         }
@@ -128,8 +128,8 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
     
     // Update fields alpha_test and assigned_to based on the content of assignment_map
     let cursor_extended = cursor.try_filter_map(|host| async {
+        println!("original host: {}", host);
         let mut host: HostSummary = bson::from_document(host)?;
-        
         if let Some(assigned_to) = assignment_map.get(&host._id) {
             host.alpha_program = Some(true);
             host.assigned_to = Some(assigned_to.to_string());

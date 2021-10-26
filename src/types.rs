@@ -71,10 +71,11 @@ pub struct Host {
     pub assigned_to: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostSummary {
+    #[serde(rename = "_id")]
     pub _id: String,
     #[serde(rename = "IP")]
     ip: String,
