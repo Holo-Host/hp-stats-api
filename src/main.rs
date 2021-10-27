@@ -1,6 +1,6 @@
+use mongodb::bson;
 use rocket::serde::json::Json;
 use rocket::{self, get, State};
-use mongodb::bson;
 
 mod db;
 mod types;
@@ -39,7 +39,10 @@ async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .manage(db::init_db_pool().await)
         .mount("/", rocket::routes![index])
-        .mount("/hosts/", rocket::routes![uptime, list_all, list_registered])
+        .mount(
+            "/hosts/",
+            rocket::routes![uptime, list_all, list_registered],
+        )
         .mount("/network/", rocket::routes![capacity])
         .launch()
         .await

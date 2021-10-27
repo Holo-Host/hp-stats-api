@@ -88,7 +88,7 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
     while let Some(a) = cursor.try_next().await? {
         assignment_map.insert(a.name, "");
     }
-    
+
     // Retrieve all holoport statuses and format for an API response
     let hp_status: Collection<Host> = db
         .database("host_statistics")
@@ -119,28 +119,24 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
                 "hostingInfo": {"$first": "$hostingInfo"},
                 "error": {"$first": "$error"},
             }
-        }
+        },
     ];
- 
-    let cursor= hp_status
-        .aggregate(pipeline, None)
-        .await?;
-    
+
+    let cursor = hp_status.aggregate(pipeline, None).await?;
+
     // Update fields alpha_test and assigned_to based on the content of assignment_map
     let cursor_extended = cursor.try_filter_map(|host| async {
-        println!("original host: {}", host);
         let mut host: HostSummary = bson::from_document(host)?;
         if let Some(assigned_to) = assignment_map.get(&host._id) {
             host.alpha_program = Some(true);
             host.assigned_to = Some(assigned_to.to_string());
         }
-        
-        return Ok(Some(host));
+
+        Ok(Some(host))
     });
 
-    return cursor_extended.try_collect().await.map_err(Debug);
+    cursor_extended.try_collect().await.map_err(Debug)
 }
-
 
 pub async fn list_registered_hosts(db: &Client) -> Result<Vec<bson::Bson>> {
     // Retrieve all holoport statuses and format for an API response
@@ -148,7 +144,5 @@ pub async fn list_registered_hosts(db: &Client) -> Result<Vec<bson::Bson>> {
         .database("host_statistics")
         .collection("holoports_status");
 
-    return hp_status.distinct("name", None, None)
-    .await
-    .map_err(Debug);
+    hp_status.distinct("name", None, None).await.map_err(Debug)
 }
