@@ -1,4 +1,5 @@
 use mongodb::bson::{self, doc};
+use mongodb::options::AggregateOptions;
 use mongodb::{Client, Collection};
 use rocket::futures::TryStreamExt;
 use rocket::response::Debug;
@@ -122,7 +123,9 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
         },
     ];
 
-    let cursor = hp_status.aggregate(pipeline, None).await?;
+    let options = AggregateOptions::builder().allow_disk_use(true).build();
+
+    let cursor = hp_status.aggregate(pipeline, Some(options)).await?;
 
     // Update fields alpha_test and assigned_to based on the content of assignment_map
     let cursor_extended = cursor.try_filter_map(|host| async {
