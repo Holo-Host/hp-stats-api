@@ -17,7 +17,7 @@ GET
 ```json
 [
   {
-    "name": "string",
+    "_id": "string",
     "IP": "string",
     "timestamp": 0,
     "sshSuccess": true,
@@ -29,6 +29,20 @@ GET
     "alphaTest": true,
     "assignedTo": "string"
   }
+]
+```
+
+GET
+`/hosts/registered`
+
+#### `200 OK`
+
+```json
+[
+  "holoport_id_1",
+  "holoport_id_2",
+  "holoport_id_3",
+  "holoport_id_4"
 ]
 ```
 
