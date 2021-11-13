@@ -1,0 +1,2 @@
+[default.databases.test]
+url = "mongodb+srv://peeech:KHqu4aHZtlnvioQ4@cluster0.xfjzk.mongodb.net/"
