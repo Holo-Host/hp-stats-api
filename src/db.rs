@@ -5,6 +5,7 @@ use rocket::futures::TryStreamExt;
 use rocket::response::Debug;
 use std::collections::HashMap;
 use std::env::var;
+use std::time::{SystemTime, Duration};
 
 use crate::types::{Assignment, Capacity, Host, HostSummary, Performance, Result, Uptime};
 
@@ -82,7 +83,19 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
         .database("host_statistics")
         .collection("alpha_program_holoports");
 
-    let mut cursor = hp_assignment.find(None, None).await?;
+    let duration = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("SystemTime should be after unix epoch");
+    let one_week = Duration::from_secs(60 * 60 * 24 * 7);
+    let one_week_ago = duration
+        .checked_sub(one_week)
+        .expect("SystemTime should be at least one week after unix epoch");
+    let ms = one_week_ago.as_millis();
+    println!("One week ago millis: {}", ms);
+
+    let filter = doc! {"timestamp": {"$gte": ms.to_string()}};  
+
+    let mut cursor = hp_assignment.find(filter, None).await?;
 
     let mut assignment_map = HashMap::new();
 
