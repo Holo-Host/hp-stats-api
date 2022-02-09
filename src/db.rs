@@ -76,24 +76,17 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
         .map_err(Debug)
 }
 
-// Return all the hosts stored in `holoports_status` collection
-pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
+// Return the most recent record for hosts stored in `holoports_status` collection that have a successful SSH record
+// Ignores records older than 7 days
+pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSummary>> {
     // Retrieve and store in memory all holoport assignments
     let hp_assignment: Collection<Assignment> = db
         .database("host_statistics")
         .collection("alpha_program_holoports");
 
-    let duration = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("SystemTime should be after unix epoch");
-    let one_week = Duration::from_secs(60 * 60 * 24 * 7);
-    let one_week_ago = duration
-        .checked_sub(one_week)
-        .expect("SystemTime should be at least one week after unix epoch");
-    let ms = one_week_ago.as_millis();
-    println!("One week ago millis: {}", ms);
+    let ms = get_cutoff_timestamp(cutoff);
 
-    let filter = doc! {"timestamp": {"$gte": ms.to_string()}};  
+    let filter = doc!{"timestamp": {"$gte": ms.to_string()}};  
 
     let mut cursor = hp_assignment.find(filter, None).await?;
 
@@ -154,11 +147,31 @@ pub async fn list_all_hosts(db: &Client) -> Result<Vec<HostSummary>> {
     cursor_extended.try_collect().await.map_err(Debug)
 }
 
-pub async fn list_registered_hosts(db: &Client) -> Result<Vec<bson::Bson>> {
+// This gets a list of all HPs including those not SSH'd
+pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson::Bson>> {
     // Retrieve all holoport statuses and format for an API response
     let hp_status: Collection<Host> = db
         .database("host_statistics")
         .collection("holoports_status");
 
-    hp_status.distinct("name", None, None).await.map_err(Debug)
+    let ms = get_cutoff_timestamp(cutoff);
+
+    let filter = doc!{"timestamp": {"$gte": ms.to_string()}};  
+
+    hp_status.distinct("name", filter, None).await.map_err(Debug)
 }
+
+// Helper function to get cutoff timestamp for filter
+fn get_cutoff_timestamp(days: u64) -> u128 {
+    let duration = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("SystemTime should be after unix epoch");
+    let one_week = Duration::from_secs(60 * 60 * 24 * days);
+    let one_week_ago = duration
+        .checked_sub(one_week)
+        .expect("SystemTime should be at least one week after unix epoch");
+    one_week_ago.as_millis()
+}
+
+    
+    

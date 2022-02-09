@@ -19,14 +19,14 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
     Ok(None)
 }
 
-#[get("/list")]
-async fn list_all(pool: &State<db::AppDbPool>) -> Result<Json<Vec<HostSummary>>> {
-    Ok(Json(db::list_all_hosts(&pool.mongo).await?))
+#[get("/list-available?<days>")]
+async fn list_available(days: u64, pool: &State<db::AppDbPool>) -> Result<Json<Vec<HostSummary>>> {
+    Ok(Json(db::list_available_hosts(&pool.mongo, days).await?))
 }
 
-#[get("/registered")]
-async fn list_registered(pool: &State<db::AppDbPool>) -> Result<Json<Vec<bson::Bson>>> {
-    Ok(Json(db::list_registered_hosts(&pool.mongo).await?))
+#[get("/registered?<days>")]
+async fn list_registered(days: u64, pool: &State<db::AppDbPool>) -> Result<Json<Vec<bson::Bson>>> {
+    Ok(Json(db::list_registered_hosts(&pool.mongo, days).await?))
 }
 
 #[get("/capacity")]
@@ -41,7 +41,7 @@ async fn main() -> Result<(), rocket::Error> {
         .mount("/", rocket::routes![index])
         .mount(
             "/hosts/",
-            rocket::routes![uptime, list_all, list_registered],
+            rocket::routes![uptime, list_available, list_registered],
         )
         .mount("/network/", rocket::routes![capacity])
         .launch()
