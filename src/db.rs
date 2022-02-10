@@ -84,11 +84,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSu
         .database("host_statistics")
         .collection("alpha_program_holoports");
 
-    let ms = get_cutoff_timestamp(cutoff);
-
-    let filter = doc!{"timestamp": {"$gte": ms.to_string()}};  
-
-    let mut cursor = hp_assignment.find(filter, None).await?;
+    let mut cursor = hp_assignment.find(None, None).await?;
 
     let mut assignment_map = HashMap::new();
 
@@ -101,11 +97,14 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSu
         .database("host_statistics")
         .collection("holoports_status");
 
+    let cutoff_ms = get_cutoff_timestamp(cutoff);
+
     let pipeline = vec![
         doc! {
-            // only successful ssh results
+            // only successful ssh results in last 7 days
             "$match": {
-                "sshSuccess": true
+                "sshSuccess": true,
+                "timestamp": {"$gte": cutoff_ms.to_string()}
             }
         },
         doc! {
@@ -130,7 +129,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSu
     ];
 
     let options = AggregateOptions::builder().allow_disk_use(true).build();
-
+     
     let cursor = hp_status.aggregate(pipeline, Some(options)).await?;
 
     // Update fields alpha_test and assigned_to based on the content of assignment_map
