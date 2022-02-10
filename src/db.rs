@@ -98,7 +98,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSu
         .collection("holoports_status");
 
     let cutoff_ms = get_cutoff_timestamp(cutoff);
-
+    println!("{}", cutoff_ms.to_string());
     let pipeline = vec![
         doc! {
             // only successful ssh results in last 7 days
