@@ -104,7 +104,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSu
             // only successful ssh results in last 7 days
             "$match": {
                 "sshSuccess": true,
-                "timestamp": {"$gte": cutoff_ms.to_string()}
+                "timestamp": {"$gte": cutoff_ms}
             }
         },
         doc! {
@@ -161,7 +161,7 @@ pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson:
 }
 
 // Helper function to get cutoff timestamp for filter
-fn get_cutoff_timestamp(days: u64) -> u128 {
+fn get_cutoff_timestamp(days: u64) -> i64 {
     let duration = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("SystemTime should be after unix epoch");
@@ -169,8 +169,6 @@ fn get_cutoff_timestamp(days: u64) -> u128 {
     let one_week_ago = duration
         .checked_sub(one_week)
         .expect("SystemTime should be at least one week after unix epoch");
-    one_week_ago.as_millis()
+    use std::convert::TryInto;
+    one_week_ago.as_millis().try_into().unwrap()
 }
-
-    
-    
