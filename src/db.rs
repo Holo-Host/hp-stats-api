@@ -77,7 +77,7 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
 }
 
 // Return the most recent record for hosts stored in `holoports_status` collection that have a successful SSH record
-// Ignores records older than 7 days
+// Ignores records older than <cutoff> days
 pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSummary>> {
     // Retrieve and store in memory all holoport assignments
     let hp_assignment: Collection<Assignment> = db
