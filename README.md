@@ -10,7 +10,9 @@ Endpoints:
 Text: status of connection to db
 
 GET
-`/hosts/list`
+`/hosts/list-available?days=7`
+
+days = Cut off time. Records older than this will be ignored.
 
 #### `200 OK`
 
@@ -26,14 +28,16 @@ GET
     "holoportModel": "string",
     "hostingInfo": "string",
     "error": "string",
-    "alphaTest": true,
+    "alphaProgram": true,
     "assignedTo": "string"
   }
 ]
 ```
 
 GET
-`/hosts/registered`
+`/hosts/registered?days=7`
+
+days = Cut off time. Records older than this will be ignored.
 
 #### `200 OK`
 

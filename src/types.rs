@@ -1,4 +1,4 @@
-use rocket::serde::{Deserialize, Serialize};
+use rocket::{serde::{Deserialize, Serialize}, response::Responder};
 
 use bson::oid::ObjectId;
 use mongodb::{bson, error::Error};
@@ -96,4 +96,14 @@ pub struct HostSummary {
 #[serde(rename_all = "camelCase")]
 pub struct Assignment {
     pub name: String,
+}
+
+#[derive(Responder)]
+#[response(status = 400)]
+pub struct BadRequest(pub &'static str);
+
+#[derive(Responder)]
+pub enum ListAvailableError {
+    BadRequest(BadRequest),
+    Database(Debug<Error>)
 }
