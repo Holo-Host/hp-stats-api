@@ -4,7 +4,7 @@ use rocket::{self, get, State};
 
 mod db;
 mod types;
-use types::{Capacity, HostSummary, Result, Uptime};
+use types::{Capacity, HostSummary, Result, Uptime, ListAvailableError};
 
 #[get("/")]
 async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
@@ -20,12 +20,12 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
 }
 
 #[get("/list-available?<days>")]
-async fn list_available(days: u64, pool: &State<db::AppDbPool>) -> Result<Json<Vec<HostSummary>>> {
+async fn list_available(days: u64, pool: &State<db::AppDbPool>) -> Result<Json<Vec<HostSummary>>, ListAvailableError> {
     Ok(Json(db::list_available_hosts(&pool.mongo, days).await?))
 }
 
 #[get("/registered?<days>")]
-async fn list_registered(days: u64, pool: &State<db::AppDbPool>) -> Result<Json<Vec<bson::Bson>>> {
+async fn list_registered(days: u64, pool: &State<db::AppDbPool>) -> Result<Json<Vec<bson::Bson>>, ListAvailableError> {
     Ok(Json(db::list_registered_hosts(&pool.mongo, days).await?))
 }
 
