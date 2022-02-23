@@ -1,8 +1,13 @@
-use rocket::{serde::{Deserialize, Serialize}, response::Responder};
+use rocket::{
+    response::Responder,
+    serde::{Deserialize, Serialize},
+};
 
 use bson::oid::ObjectId;
 use mongodb::{bson, error::Error};
 use rocket::response::Debug;
+
+use std::time::SystemTime;
 
 // [rocket::response::Debug](https://api.rocket.rs/v0.5-rc/rocket/response/struct.Debug.html) implements Responder to Error
 pub type Result<T, E = Debug<Error>> = std::result::Result<T, E>;
@@ -103,7 +108,106 @@ pub struct Assignment {
 pub struct BadRequest(pub &'static str);
 
 #[derive(Responder)]
-pub enum ListAvailableError {
+pub enum ApiError {
     BadRequest(BadRequest),
-    Database(Debug<Error>)
+    Database(Debug<Error>),
+}
+
+pub struct HostSignature(String);
+
+#[derive(Debug)]
+pub enum HostError {
+    MissingRecord,
+    MissingSignature,
+    InvalidSignature,
+    InvalidPayload,
+}
+
+// Input type for /hosts/stats endpoint
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct HostStats {
+    pub email: String, // >> discuss adding email to `HostStats` schema to use as filter instead of pubkey/hostid
+    pub holo_network: Option<String>,
+    pub channel: Option<String>,
+    pub holoport_model: Option<String>,
+    pub ssh_status: bool, // why is this not passed in as ssh_success to match the schema
+    pub zt_ip: String,    // what are we using this value for? > should it be added to the schema?
+    pub wan_ip: String, // is this going to be the correct ip of the hp? - or does it still need to be configured with this as input?
+    pub holoport_id: String,
+}
+
+// Data schema in collection `holoports_status`
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct HoloportStatus {
+    #[serde(rename = "name")]
+    pub holoport_id: String,
+    #[serde(rename = "IP")]
+    pub ip: String,
+    pub timestamp: SystemTime,
+    pub ssh_success: bool,
+    pub holo_network: Option<String>,
+    pub channel: Option<String>,
+    pub holoport_model: Option<String>,
+    pub hosting_info: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct NumberInt {
+    number_int: u16,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct NumberLong {
+    number_long: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct DateCreated {
+    date: NumberLong,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct AgentPubKeys {
+    pub pub_key: String,
+    role: String,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct RegistrationCode {
+    code: String,
+    role: String,
+    pub agent_pub_keys: Vec<AgentPubKeys>,
+}
+
+// Data schema in database `opsconsoledb`, collection `registration`
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct HostRegistration {
+    #[serde(skip)]
+    _id: ObjectId,
+    #[serde(skip)]
+    _v: NumberInt,
+    given_names: String,
+    last_name: String,
+    is_jurisdiction_not_in_list: bool,
+    legal_jurisdiction: String,
+    created: DateCreated,
+    old_holoport_ids: Vec<String>,
+    pub registration_code: Vec<RegistrationCode>,
 }
