@@ -55,12 +55,12 @@ async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
 async fn update_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(), ApiError> {
     // todo: move this into `decode_pubkey` common fn
     let decoded_pubkey = base36::decode(&stats.holoport_id).unwrap();
-    let public_key = PublicKey::from_bytes(&decoded_pubkey).unwrap();
+    let ed25519_pubkey = PublicKey::from_bytes(&decoded_pubkey).unwrap();
 
     // Confirm host exists in registration records
     let _ = db::verify_host(
         stats.email,
-        to_holochain_encoded_agent_key(&public_key),
+        to_holochain_encoded_agent_key(&ed25519_pubkey),
         &pool.mongo,
     )
     .await
@@ -134,16 +134,16 @@ impl<'r> FromData<'r> for HostStats {
                 }
             };
 
-            // TEMP NOTE: comment out in manual test - sig not verifiable
+            // TEMP NOTE: comment out in manual postman test - sig not verifiable
             let decoded_sig = base64::decode(signature).unwrap();
             let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
 
             // todo: move this into `decode_pubkey` common fn
             let decoded_pubkey = base36::decode(&host_stats.holoport_id).unwrap();
-            let public_key = PublicKey::from_bytes(&decoded_pubkey).unwrap();
+            let ed25519_pubkey = PublicKey::from_bytes(&decoded_pubkey).unwrap();
 
-            // TEMP NOTE: comment out in manual test - sig not verifiable
-            return match public_key.verify_strict(&decoded_data.value, &ed25519_sig) {
+            // TEMP NOTE: comment out in manual postman test - sig not verifiable
+            return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {
                 Ok(_) => Success(host_stats),
                 Err(_) => Failure((
                     Status::Unauthorized,
@@ -153,13 +153,13 @@ impl<'r> FromData<'r> for HostStats {
                 )),
             };
 
-            // NOTE: comment in manual for test - sig not verifiable
+            // NOTE: comment in manual postman test - sig not verifiable
             // return Success(host_stats);
         }
         Failure((
             Status::BadRequest,
             ApiError::BadRequest(ErrorMessage(
-                "Made an unrecognized call with HostStats parameters.",
+                "Made an unrecognized api call with the `HostStats` struct as parameters.",
             )),
         ))
     }
