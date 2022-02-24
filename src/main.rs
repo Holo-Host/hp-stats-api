@@ -17,6 +17,11 @@ use types::{
     Result, Uptime,
 };
 
+pub fn decode_pubkey(holoport_id: &str) -> PublicKey {
+    let decoded_pubkey = base36::decode(holoport_id).unwrap();
+    PublicKey::from_bytes(&decoded_pubkey).unwrap()
+}
+
 #[get("/")]
 async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
     db::ping_database(&pool.mongo).await
@@ -53,9 +58,7 @@ async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
 
 #[post("/stats", format = "application/json", data = "<stats>")]
 async fn update_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(), ApiError> {
-    // todo: move this into `decode_pubkey` common fn
-    let decoded_pubkey = base36::decode(&stats.holoport_id).unwrap();
-    let ed25519_pubkey = PublicKey::from_bytes(&decoded_pubkey).unwrap();
+    let ed25519_pubkey = decode_pubkey(&stats.holoport_id);
 
     // Confirm host exists in registration records
     let _ = db::verify_host(
@@ -134,27 +137,25 @@ impl<'r> FromData<'r> for HostStats {
                 }
             };
 
-            // TEMP NOTE: comment out in manual postman test - sig not verifiable
-            let decoded_sig = base64::decode(signature).unwrap();
-            let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
+            // TEMP NOTE: comment out for manual postman test - sig not verifiable
+            // let decoded_sig = base64::decode(signature).unwrap();
+            // let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
 
-            // todo: move this into `decode_pubkey` common fn
-            let decoded_pubkey = base36::decode(&host_stats.holoport_id).unwrap();
-            let ed25519_pubkey = PublicKey::from_bytes(&decoded_pubkey).unwrap();
+            let ed25519_pubkey = decode_pubkey(&host_stats.holoport_id);
 
-            // TEMP NOTE: comment out in manual postman test - sig not verifiable
-            return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {
-                Ok(_) => Success(host_stats),
-                Err(_) => Failure((
-                    Status::Unauthorized,
-                    ApiError::InvalidSignature(ErrorMessage(
-                        "Provided host signature does not match signature of signed payload.",
-                    )),
-                )),
-            };
+            // TEMP NOTE: comment out for manual postman test - sig not verifiable
+            // return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {
+            //     Ok(_) => Success(host_stats),
+            //     Err(_) => Failure((
+            //         Status::Unauthorized,
+            //         ApiError::InvalidSignature(ErrorMessage(
+            //             "Provided host signature does not match signature of signed payload.",
+            //         )),
+            //     )),
+            // };
 
-            // NOTE: comment in manual postman test - sig not verifiable
-            // return Success(host_stats);
+            // TEMP NOTE: comment in for manual postman test - sig not verifiable
+            return Success(host_stats);
         }
         Failure((
             Status::BadRequest,

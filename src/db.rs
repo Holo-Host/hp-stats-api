@@ -238,12 +238,10 @@ pub async fn add_holoport_status(hps: HoloportStatus, db: &Client) -> Result<(),
 // Find registration values for host identified by email in the `opsconsoledb` collection `registration`
 // and determine whether the provided host pub key exists within record
 pub async fn verify_host(email: String, pub_key: String, db: &Client) -> Result<(), ApiError> {
-    println!("Verify host");
     let records: Collection<HostRegistration> = db
         .database("opsconsoledb")
         .collection("performance_summary");
 
-    println!("Verifing host");
     let host_registration = match records
         .find_one(Some(doc! {"email": email.clone()}), None)
         .await
@@ -252,16 +250,14 @@ pub async fn verify_host(email: String, pub_key: String, db: &Client) -> Result<
         Err(e) => return Err(ApiError::Database(Debug(e))),
     };
 
-    println!("found some: {:?}", host_registration);
     if host_registration
         .registration_code
         .iter()
-        .any(|r| r.agent_pub_keys.iter().any(|key| key.pub_key == pub_key))
+        .any(|r| r.agent_pub_keys.iter().any(|keys| keys.pub_key == pub_key))
     {
         return Ok(());
     }
 
-    // Decide on status code to return with error
     Err(ApiError::MissingRecord(ErrorMessageInfo(format!(
         "No host found with provided email. {:?}",
         email

@@ -74,7 +74,7 @@ pub struct Host {
     pub assigned_to: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostSummary {
@@ -106,6 +106,7 @@ pub struct Assignment {
 pub struct ErrorMessage(pub &'static str);
 
 #[derive(Responder, Debug)]
+#[response(status = 400)]
 pub struct ErrorMessageInfo(pub String);
 
 #[derive(Responder, Debug)]
@@ -119,7 +120,7 @@ pub enum ApiError {
 }
 
 // Input type for /hosts/stats endpoint
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostStats {
@@ -151,28 +152,28 @@ pub struct HoloportStatus {
     pub error: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize, Default)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct NumberInt {
     number_int: u16,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct NumberLong {
     number_long: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct DateCreated {
     date: NumberLong,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct AgentPubKeys {
@@ -180,7 +181,7 @@ pub struct AgentPubKeys {
     role: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrationCode {
@@ -190,7 +191,7 @@ pub struct RegistrationCode {
 }
 
 // Data schema in database `opsconsoledb`, collection `registration`
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostRegistration {
