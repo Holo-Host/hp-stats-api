@@ -8,12 +8,12 @@ use std::env::var;
 use std::time::{Duration, SystemTime};
 
 use crate::types::{
-    ApiError, Assignment, BadRequest, Capacity, HoloportStatus, Host, HostRegistration,
-    HostSummary, Performance, Result, Uptime,
+    ApiError, Assignment, Capacity, ErrorMessage, ErrorMessageInfo, HoloportStatus, Host,
+    HostRegistration, HostSummary, Performance, Result, Uptime,
 };
 
-const DAYS_TOO_LARGE: BadRequest =
-    BadRequest("Days specified is too large. Cutoff is earlier than start of unix epoch");
+const DAYS_TOO_LARGE: ErrorMessage =
+    ErrorMessage("Days specified is too large. Cutoff is earlier than start of unix epoch");
 
 // AppDbPool is managed by Rocket as a State, which means it is available across threads.
 // Type mongodb::Database (starting v2.0.0 of mongodb driver) represents a connection pool to db,
@@ -25,6 +25,7 @@ pub struct AppDbPool {
 // Initialize database and return in form of an AppDbPool
 pub async fn init_db_pool() -> AppDbPool {
     let mongo_uri: String = var("MONGO_URI").expect("MONGO_URI must be set in the env");
+
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
 
     AppDbPool { mongo: client }
@@ -227,36 +228,42 @@ pub async fn add_holoport_status(hps: HoloportStatus, db: &Client) -> Result<(),
         "hosting_info": hps.hosting_info,
         "error": hps.error
     };
-    if hp_status.insert_one(val.clone(), None).await? {
-        Ok(())
+    match hp_status.insert_one(val.clone(), None).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(ApiError::Database(Debug(e))),
     }
-    Err(ApiError::BadRequest(BadRequest(
-        "encountered a problem when inserting new data in server",
-    )))
 }
 
 /// Ops Console DB:
 // Find registration values for host identified by email in the `opsconsoledb` collection `registration`
 // and determine whether the provided host pub key exists within record
 pub async fn verify_host(email: String, pub_key: String, db: &Client) -> Result<(), ApiError> {
+    println!("Verify host");
     let records: Collection<HostRegistration> = db
         .database("opsconsoledb")
         .collection("performance_summary");
 
-    if let Some(host_registration) = records
-        .find_one(Some(doc! {"email": email}), None)
+    println!("Verifing host");
+    let host_registration = match records
+        .find_one(Some(doc! {"email": email.clone()}), None)
         .await
-        .unwrap()
     {
-        if host_registration
-            .registration_code
-            .iter()
-            .any(|r| r.agent_pub_keys.iter().any(|key| key.pub_key == pub_key))
-        {
-            return Ok(());
-        }
+        Ok(r) => r.unwrap(),
+        Err(e) => return Err(ApiError::Database(Debug(e))),
+    };
+
+    println!("found some: {:?}", host_registration);
+    if host_registration
+        .registration_code
+        .iter()
+        .any(|r| r.agent_pub_keys.iter().any(|key| key.pub_key == pub_key))
+    {
+        return Ok(());
     }
 
     // Decide on status code to return with error
-    Err(ApiError::BadRequest(BadRequest("Host not verified"))) // Host not verified > unable to update db
+    Err(ApiError::MissingRecord(ErrorMessageInfo(format!(
+        "No host found with provided email. {:?}",
+        email
+    ))))
 }

@@ -16,6 +16,7 @@ chrono = "0.4.19"
 serde_json = "1.0.79"
 serde = "1.0.136"
 tokio = ""
+bincode = "1.0"
 
 [dependencies.hpos-config-core]
 git = "https://github.com/Holo-Host/hpos-config"

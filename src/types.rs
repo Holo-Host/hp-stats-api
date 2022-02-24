@@ -7,8 +7,6 @@ use bson::oid::ObjectId;
 use mongodb::{bson, error::Error};
 use rocket::response::Debug;
 
-use std::time::SystemTime;
-
 // [rocket::response::Debug](https://api.rocket.rs/v0.5-rc/rocket/response/struct.Debug.html) implements Responder to Error
 pub type Result<T, E = Debug<Error>> = std::result::Result<T, E>;
 
@@ -103,28 +101,25 @@ pub struct Assignment {
     pub name: String,
 }
 
-#[derive(Responder)]
+#[derive(Responder, Debug)]
 #[response(status = 400)]
-pub struct BadRequest(pub &'static str);
+pub struct ErrorMessage(pub &'static str);
 
-#[derive(Responder)]
+#[derive(Responder, Debug)]
+pub struct ErrorMessageInfo(pub String);
+
+#[derive(Responder, Debug)]
 pub enum ApiError {
-    BadRequest(BadRequest),
+    BadRequest(ErrorMessage),
     Database(Debug<Error>),
-}
-
-pub struct HostSignature(String);
-
-#[derive(Debug)]
-pub enum HostError {
-    MissingRecord,
-    MissingSignature,
-    InvalidSignature,
-    InvalidPayload,
+    InvalidPayload(ErrorMessageInfo),
+    MissingRecord(ErrorMessageInfo),
+    MissingSignature(ErrorMessage),
+    InvalidSignature(ErrorMessage),
 }
 
 // Input type for /hosts/stats endpoint
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostStats {
@@ -147,7 +142,7 @@ pub struct HoloportStatus {
     pub holoport_id: String,
     #[serde(rename = "IP")]
     pub ip: String,
-    pub timestamp: SystemTime,
+    pub timestamp: String,
     pub ssh_success: bool,
     pub holo_network: Option<String>,
     pub channel: Option<String>,
@@ -156,28 +151,28 @@ pub struct HoloportStatus {
     pub error: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct NumberInt {
     number_int: u16,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct NumberLong {
     number_long: u64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct DateCreated {
     date: NumberLong,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct AgentPubKeys {
@@ -185,7 +180,7 @@ pub struct AgentPubKeys {
     role: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrationCode {
@@ -195,7 +190,7 @@ pub struct RegistrationCode {
 }
 
 // Data schema in database `opsconsoledb`, collection `registration`
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostRegistration {
