@@ -8,8 +8,8 @@ use std::env::var;
 use std::time::{Duration, SystemTime};
 
 use crate::types::{
-    ApiError, Assignment, Capacity, ErrorMessage, ErrorMessageInfo, HoloportStatus, Host,
-    HostRegistration, HostSummary, Performance, Result, Uptime,
+    ApiError, Assignment, Capacity, ErrorMessage, ErrorMessageInfo, Host, HostRegistration,
+    HostStats, HostSummary, Performance, Result, Uptime,
 };
 
 const DAYS_TOO_LARGE: ErrorMessage =
@@ -213,20 +213,20 @@ fn get_cutoff_timestamp(days: u64) -> Option<i64> {
 }
 
 // Add values to the collection `holoports_status`
-pub async fn add_holoport_status(hps: HoloportStatus, db: &Client) -> Result<(), ApiError> {
+pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiError> {
     let hp_status: Collection<Document> = db
         .database("host_statistics")
         .collection("holoports_status");
     let val = doc! {
-        "holoport_id": hps.holoport_id,
-        "ip": hps.ip,
-        "timestamp": hps.timestamp,
-        "ssh_success": hps.ssh_success,
-        "holo_network": hps.holo_network,
-        "channel": hps.channel,
-        "holoport_model": hps.holoport_model,
-        "hosting_info": hps.hosting_info,
-        "error": hps.error
+        "holo_network": hs.holo_network,
+        "channel": hs.channel,
+        "holoport_model": hs.holoport_model,
+        "ssh_status": hs.ssh_status,
+        "zt_ip": hs.zt_ip,
+        "wan_ip": hs.wan_ip,
+        "holoport_id_base36": hs.holoport_id_base36,
+        "timestamp": hs.timestamp,
+        "email": hs.email
     };
     match hp_status.insert_one(val.clone(), None).await {
         Ok(_) => Ok(()),

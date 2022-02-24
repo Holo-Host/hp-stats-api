@@ -13,8 +13,7 @@ use std::time::SystemTime;
 mod db;
 mod types;
 use types::{
-    ApiError, Capacity, ErrorMessage, ErrorMessageInfo, HoloportStatus, HostStats, HostSummary,
-    Result, Uptime,
+    ApiError, Capacity, ErrorMessage, ErrorMessageInfo, HostStats, HostSummary, Result, Uptime,
 };
 
 pub fn decode_pubkey(holoport_id: &str) -> PublicKey {
@@ -58,11 +57,11 @@ async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
 
 #[post("/stats", format = "application/json", data = "<stats>")]
 async fn update_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(), ApiError> {
-    let ed25519_pubkey = decode_pubkey(&stats.holoport_id);
+    let ed25519_pubkey = decode_pubkey(&stats.holoport_id_base36);
 
     // Confirm host exists in registration records
     let _ = db::verify_host(
-        stats.email,
+        stats.email.clone(),
         to_holochain_encoded_agent_key(&ed25519_pubkey),
         &pool.mongo,
     )
@@ -75,16 +74,16 @@ async fn update_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(
     });
 
     // Add utc timestamp to stats payload and insert into db
-    let holoport_status = HoloportStatus {
-        timestamp: format!("{:?}", SystemTime::now()),
+    let holoport_status = HostStats {
         holo_network: stats.holo_network,
         channel: stats.channel,
         holoport_model: stats.holoport_model,
-        ssh_success: stats.ssh_status,
-        ip: stats.wan_ip,
-        holoport_id: stats.holoport_id,
-        hosting_info: None,
-        error: None,
+        ssh_status: stats.ssh_status,
+        zt_ip: stats.zt_ip,
+        wan_ip: stats.wan_ip,
+        holoport_id_base36: stats.holoport_id_base36,
+        timestamp: format!("{:?}", SystemTime::now()),
+        email: stats.email,
     };
     db::add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())
@@ -151,7 +150,7 @@ impl<'r> FromData<'r> for HostStats {
             };
             let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
 
-            let ed25519_pubkey = decode_pubkey(&host_stats.holoport_id);
+            let ed25519_pubkey = decode_pubkey(&host_stats.holoport_id_base36);
 
             // TEMP NOTE: comment out for manual postman test - sig not verifiable
             return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {

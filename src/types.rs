@@ -120,36 +120,20 @@ pub struct Assignment {
 }
 
 // Input type for /hosts/stats endpoint
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(crate = "rocket::serde")]
-#[serde(rename_all = "camelCase")]
-pub struct HostStats {
-    pub email: String, // >> discuss adding email to `HostStats` schema to use as filter instead of pubkey/hostid
-    pub holo_network: Option<String>,
-    pub channel: Option<String>,
-    pub holoport_model: Option<String>,
-    pub ssh_status: bool, // why is this not passed in as ssh_success to match the schema
-    pub zt_ip: String,    // what are we using this value for? > should it be added to the schema?
-    pub wan_ip: String, // is this going to be the correct ip of the hp? - or does it still need to be configured with this as input?
-    pub holoport_id: String,
-}
-
 // Data schema in collection `holoports_status`
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
-pub struct HoloportStatus {
-    #[serde(rename = "name")]
-    pub holoport_id: String,
-    #[serde(rename = "IP")]
-    pub ip: String,
-    pub timestamp: String,
-    pub ssh_success: bool,
+pub struct HostStats {
     pub holo_network: Option<String>,
     pub channel: Option<String>,
     pub holoport_model: Option<String>,
-    pub hosting_info: Option<String>,
-    pub error: Option<String>,
+    pub ssh_status: bool,
+    pub zt_ip: String,
+    pub wan_ip: String,
+    pub holoport_id_base36: String,
+    pub timestamp: String,
+    pub email: String, // >> discuss adding email to `HostStats` schema to use as filter instead of pubkey/hostid
 }
 
 #[derive(Serialize, Deserialize, Default)]
