@@ -13,7 +13,8 @@ use std::time::SystemTime;
 mod db;
 mod types;
 use types::{
-    ApiError, Capacity, ErrorMessage, ErrorMessageInfo, HostStats, HostSummary, Result, Uptime,
+    ApiError, Capacity, ErrorMessage, ErrorMessageInfo, HoloportStatus, HostStats, HostSummary,
+    Result, Uptime,
 };
 
 #[get("/")]
@@ -52,8 +53,6 @@ async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
 
 #[post("/stats", format = "application/json", data = "<stats>")]
 async fn update_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(), ApiError> {
-    println!(" ENTERED INTO update_stats");
-
     // todo: move this into `decode_pubkey` common fn
     let decoded_pubkey = base36::decode(&stats.holoport_id).unwrap();
     let public_key = PublicKey::from_bytes(&decoded_pubkey).unwrap();
@@ -72,20 +71,19 @@ async fn update_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(
         ))));
     });
 
-    // // Add utc timestamp to stats payload and insert into db
-    // let timestamp = format!("{:?}", SystemTime::now());
-    // let holoport_status = HoloportStatus {
-    //     timestamp: format!("{:?}", SystemTime::now()),
-    //     holo_network: stats.holo_network,
-    //     channel: stats.channel,
-    //     holoport_model: stats.holoport_model,
-    //     ssh_success: stats.ssh_status,
-    //     ip: stats.wan_ip,
-    //     holoport_id: stats.holoport_id,
-    //     hosting_info: None,
-    //     error: None,
-    // };
-    // db::add_holoport_status(holoport_status, &pool.mongo).await?;
+    // Add utc timestamp to stats payload and insert into db
+    let holoport_status = HoloportStatus {
+        timestamp: format!("{:?}", SystemTime::now()),
+        holo_network: stats.holo_network,
+        channel: stats.channel,
+        holoport_model: stats.holoport_model,
+        ssh_success: stats.ssh_status,
+        ip: stats.wan_ip,
+        holoport_id: stats.holoport_id,
+        hosting_info: None,
+        error: None,
+    };
+    db::add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())
 }
 
@@ -108,8 +106,6 @@ impl<'r> FromData<'r> for HostStats {
     type Error = ApiError;
 
     async fn from_data(request: &'r Request<'_>, data: Data<'r>) -> data::Outcome<'r, Self> {
-        println!(" ENTERED INTO from_data DATA GUARD");
-
         // Use data guard on `/stats` POST to verify host's signature in headers
         if request.method() == Method::Post && request.uri().path() == "/hosts/stats" {
             let signature = match request.headers().get_one("x-hpos-signature") {
@@ -138,20 +134,27 @@ impl<'r> FromData<'r> for HostStats {
                 }
             };
 
-            println!("Sig: {:?}", signature);
-            // let decoded_sig = base64::decode(signature).unwrap();
-            // let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
+            // TEMP NOTE: comment out in manual test - sig not verifiable
+            let decoded_sig = base64::decode(signature).unwrap();
+            let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
 
             // todo: move this into `decode_pubkey` common fn
             let decoded_pubkey = base36::decode(&host_stats.holoport_id).unwrap();
             let public_key = PublicKey::from_bytes(&decoded_pubkey).unwrap();
-            println!(" public_key: {:?}", public_key);
-            println!(" host_stats: {:?}", host_stats);
-            // return match public_key.verify_strict(&decoded_data.value, &ed25519_sig) {
-            //     Ok(_) => Success(host_stats),
-            //     Err(_) => Failure((Status::Unauthorized, ApiError::InvalidSignature(ErrorMessage("Provided host signature does not match signature of signed payload.")))),
-            // };
-            return Success(host_stats);
+
+            // TEMP NOTE: comment out in manual test - sig not verifiable
+            return match public_key.verify_strict(&decoded_data.value, &ed25519_sig) {
+                Ok(_) => Success(host_stats),
+                Err(_) => Failure((
+                    Status::Unauthorized,
+                    ApiError::InvalidSignature(ErrorMessage(
+                        "Provided host signature does not match signature of signed payload.",
+                    )),
+                )),
+            };
+
+            // NOTE: comment in manual for test - sig not verifiable
+            // return Success(host_stats);
         }
         Failure((
             Status::BadRequest,
