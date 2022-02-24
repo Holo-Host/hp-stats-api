@@ -138,24 +138,24 @@ impl<'r> FromData<'r> for HostStats {
             };
 
             // TEMP NOTE: comment out for manual postman test - sig not verifiable
-            // let decoded_sig = base64::decode(signature).unwrap();
-            // let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
+            let decoded_sig = base64::decode(signature).unwrap();
+            let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
 
             let ed25519_pubkey = decode_pubkey(&host_stats.holoport_id);
 
             // TEMP NOTE: comment out for manual postman test - sig not verifiable
-            // return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {
-            //     Ok(_) => Success(host_stats),
-            //     Err(_) => Failure((
-            //         Status::Unauthorized,
-            //         ApiError::InvalidSignature(ErrorMessage(
-            //             "Provided host signature does not match signature of signed payload.",
-            //         )),
-            //     )),
-            // };
+            return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {
+                Ok(_) => Success(host_stats),
+                Err(_) => Failure((
+                    Status::Unauthorized,
+                    ApiError::InvalidSignature(ErrorMessage(
+                        "Provided host signature does not match signature of signed payload.",
+                    )),
+                )),
+            };
 
             // TEMP NOTE: comment in for manual postman test - sig not verifiable
-            return Success(host_stats);
+            // return Success(host_stats);
         }
         Failure((
             Status::BadRequest,
