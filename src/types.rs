@@ -10,6 +10,24 @@ use rocket::response::Debug;
 // [rocket::response::Debug](https://api.rocket.rs/v0.5-rc/rocket/response/struct.Debug.html) implements Responder to Error
 pub type Result<T, E = Debug<Error>> = std::result::Result<T, E>;
 
+#[derive(Responder, Debug)]
+#[response(status = 400)]
+pub struct ErrorMessage(pub &'static str);
+
+#[derive(Responder, Debug)]
+#[response(status = 400)]
+pub struct ErrorMessageInfo(pub String);
+
+#[derive(Responder, Debug)]
+pub enum ApiError {
+    BadRequest(ErrorMessage),
+    Database(Debug<Error>),
+    InvalidPayload(ErrorMessageInfo),
+    MissingRecord(ErrorMessageInfo),
+    MissingSignature(ErrorMessage),
+    InvalidSignature(ErrorMessage),
+}
+
 // Return type for /network/capacity endpoint
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -99,24 +117,6 @@ pub struct HostSummary {
 #[serde(rename_all = "camelCase")]
 pub struct Assignment {
     pub name: String,
-}
-
-#[derive(Responder, Debug)]
-#[response(status = 400)]
-pub struct ErrorMessage(pub &'static str);
-
-#[derive(Responder, Debug)]
-#[response(status = 400)]
-pub struct ErrorMessageInfo(pub String);
-
-#[derive(Responder, Debug)]
-pub enum ApiError {
-    BadRequest(ErrorMessage),
-    Database(Debug<Error>),
-    InvalidPayload(ErrorMessageInfo),
-    MissingRecord(ErrorMessageInfo),
-    MissingSignature(ErrorMessage),
-    InvalidSignature(ErrorMessage),
 }
 
 // Input type for /hosts/stats endpoint

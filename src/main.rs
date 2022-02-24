@@ -126,7 +126,7 @@ impl<'r> FromData<'r> for HostStats {
             let byte_unit_data = data.open(data::ByteUnit::max_value());
             let decoded_data = byte_unit_data.into_bytes().await.unwrap();
             let host_stats: HostStats = match serde_json::from_slice(&decoded_data.value) {
-                Ok(a) => a,
+                Ok(hs) => hs,
                 Err(e) => {
                     return Failure((
                         Status::UnprocessableEntity,
@@ -138,7 +138,17 @@ impl<'r> FromData<'r> for HostStats {
             };
 
             // TEMP NOTE: comment out for manual postman test - sig not verifiable
-            let decoded_sig = base64::decode(signature).unwrap();
+            let decoded_sig = match base64::decode(signature) {
+                Ok(ds) => ds,
+                Err(_) => {
+                    return Failure((
+                        Status::UnprocessableEntity,
+                        ApiError::InvalidSignature(ErrorMessage(
+                            "Provided signature to `hosts/stats` does not have the expected encoding",
+                        )),
+                    ));
+                }
+            };
             let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
 
             let ed25519_pubkey = decode_pubkey(&host_stats.holoport_id);
