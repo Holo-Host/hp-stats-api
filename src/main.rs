@@ -1,6 +1,5 @@
 use base64;
-use ed25519_dalek::{PublicKey, Signature};
-use hpos_config_core::public_key::to_holochain_encoded_agent_key;
+use ed25519_dalek::Signature;
 use mongodb::bson;
 use rocket::data::{self, Data, FromData};
 use rocket::http::{Method, Status};
@@ -8,18 +7,10 @@ use rocket::outcome::Outcome::*;
 use rocket::request::Request;
 use rocket::serde::json::Json;
 use rocket::{self, get, post, State};
-use std::time::SystemTime;
 
 mod db;
 mod types;
-use types::{
-    ApiError, Capacity, ErrorMessage, ErrorMessageInfo, HostStats, HostSummary, Result, Uptime,
-};
-
-pub fn decode_pubkey(holoport_id: &str) -> PublicKey {
-    let decoded_pubkey = base36::decode(holoport_id).unwrap();
-    PublicKey::from_bytes(&decoded_pubkey).unwrap()
-}
+use types::{ApiError, Capacity, Error400, Error401, HostStats, Result, Uptime};
 
 #[get("/")]
 async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
@@ -38,7 +29,7 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
 async fn list_available(
     days: u64,
     pool: &State<db::AppDbPool>,
-) -> Result<Json<Vec<HostSummary>>, ApiError> {
+) -> Result<Json<Vec<HostStats>>, ApiError> {
     Ok(Json(db::list_available_hosts(&pool.mongo, days).await?))
 }
 
@@ -56,37 +47,8 @@ async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
 }
 
 #[post("/stats", format = "application/json", data = "<stats>")]
-async fn update_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(), ApiError> {
-    let ed25519_pubkey = decode_pubkey(&stats.holoport_id_base36);
-
-    // Confirm host exists in registration records
-    let _ = db::verify_host(
-        stats.email.clone(),
-        to_holochain_encoded_agent_key(&ed25519_pubkey),
-        &pool.mongo,
-    )
-    .await
-    .or_else(|e| {
-        return Err(ApiError::MissingRecord(ErrorMessageInfo(format!(
-            "Provided host's holoport_id is not registered among valid hosts.  Error: {:?}",
-            e
-        ))));
-    });
-
-    // Add utc timestamp to stats payload and insert into db
-    let holoport_status = HostStats {
-        holo_network: stats.holo_network,
-        channel: stats.channel,
-        holoport_model: stats.holoport_model,
-        ssh_status: stats.ssh_status,
-        zt_ip: stats.zt_ip,
-        wan_ip: stats.wan_ip,
-        holoport_id_base36: stats.holoport_id_base36,
-        timestamp: format!("{:?}", SystemTime::now()),
-        email: stats.email,
-    };
-    db::add_holoport_status(holoport_status, &pool.mongo).await?;
-    Ok(())
+async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(), ApiError> {
+    Ok(db::add_host_stats(stats, &pool).await?)
 }
 
 #[rocket::main]
@@ -96,7 +58,7 @@ async fn main() -> Result<(), rocket::Error> {
         .mount("/", rocket::routes![index])
         .mount(
             "/hosts/",
-            rocket::routes![uptime, list_available, list_registered, update_stats],
+            rocket::routes![uptime, list_available, list_registered, add_host_stats],
         )
         .mount("/network/", rocket::routes![capacity])
         .launch()
@@ -115,7 +77,7 @@ impl<'r> FromData<'r> for HostStats {
                 None => {
                     return Failure((
                         Status::Unauthorized,
-                        ApiError::MissingSignature(ErrorMessage(
+                        ApiError::MissingSignature(Error401::Message(
                             "Host's hpos signature was not located in the request headers.",
                         )),
                     ))
@@ -129,7 +91,7 @@ impl<'r> FromData<'r> for HostStats {
                 Err(e) => {
                     return Failure((
                         Status::UnprocessableEntity,
-                        ApiError::InvalidPayload(ErrorMessageInfo(
+                        ApiError::InvalidPayload(Error400::Info(
                             format!("Provided payload to `hosts/stats` does not match expected payload. Error: {:?}", e),
                         )),
                     ));
@@ -139,25 +101,25 @@ impl<'r> FromData<'r> for HostStats {
             // TEMP NOTE: comment out for manual postman test - sig not verifiable
             let decoded_sig = match base64::decode(signature) {
                 Ok(ds) => ds,
-                Err(_) => {
+                Err(e) => {
                     return Failure((
                         Status::UnprocessableEntity,
-                        ApiError::InvalidSignature(ErrorMessage(
-                            "Provided signature to `hosts/stats` does not have the expected encoding",
+                        ApiError::InvalidSignature(Error401::Info(
+                            format!("Provided signature to `hosts/stats` does not have the expected encoding. Error: {:?}", e),
                         )),
                     ));
                 }
             };
             let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
 
-            let ed25519_pubkey = decode_pubkey(&host_stats.holoport_id_base36);
+            let ed25519_pubkey = db::decode_pubkey(&host_stats.holoport_id_base36);
 
             // TEMP NOTE: comment out for manual postman test - sig not verifiable
             return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {
                 Ok(_) => Success(host_stats),
                 Err(_) => Failure((
                     Status::Unauthorized,
-                    ApiError::InvalidSignature(ErrorMessage(
+                    ApiError::InvalidSignature(Error401::Message(
                         "Provided host signature does not match signature of signed payload.",
                     )),
                 )),
@@ -168,7 +130,7 @@ impl<'r> FromData<'r> for HostStats {
         }
         Failure((
             Status::BadRequest,
-            ApiError::BadRequest(ErrorMessage(
+            ApiError::BadRequest(Error400::Message(
                 "Made an unrecognized api call with the `HostStats` struct as parameters.",
             )),
         ))

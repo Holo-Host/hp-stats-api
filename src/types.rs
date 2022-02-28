@@ -10,22 +10,41 @@ use rocket::response::Debug;
 // [rocket::response::Debug](https://api.rocket.rs/v0.5-rc/rocket/response/struct.Debug.html) implements Responder to Error
 pub type Result<T, E = Debug<Error>> = std::result::Result<T, E>;
 
-#[derive(Responder, Debug)]
-#[response(status = 400)]
-pub struct ErrorMessage(pub &'static str);
+// Debug errors default to 500
+pub type Error500 = Debug<Error>;
 
 #[derive(Responder, Debug)]
 #[response(status = 400)]
-pub struct ErrorMessageInfo(pub String);
+pub enum Error400 {
+    Info(String),
+    Message(&'static str),
+}
+
+#[derive(Responder, Debug)]
+#[response(status = 401)]
+
+pub enum Error401 {
+    Info(String),
+    Message(&'static str),
+}
+
+#[derive(Responder, Debug)]
+#[response(status = 404)]
+// Disable warning if any type within 404 enum is unused
+#[allow(dead_code)]
+pub enum Error404 {
+    Info(String),
+    Message(&'static str),
+}
 
 #[derive(Responder, Debug)]
 pub enum ApiError {
-    BadRequest(ErrorMessage),
-    Database(Debug<Error>),
-    InvalidPayload(ErrorMessageInfo),
-    MissingRecord(ErrorMessageInfo),
-    MissingSignature(ErrorMessage),
-    InvalidSignature(ErrorMessage),
+    BadRequest(Error400),
+    Database(Error500),
+    InvalidPayload(Error400),
+    MissingRecord(Error404),
+    MissingSignature(Error401),
+    InvalidSignature(Error401),
 }
 
 // Return type for /network/capacity endpoint
@@ -70,47 +89,6 @@ pub struct Uptime {
     pub uptime: f32,
 }
 
-// Data schema in `holoports_status` collection
-// and return type for /hosts/list endpoint
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "rocket::serde")]
-#[serde(rename_all = "camelCase")]
-pub struct Host {
-    #[serde(skip)]
-    _id: ObjectId,
-    pub name: String,
-    #[serde(rename = "IP")]
-    ip: String,
-    pub timestamp: f64,
-    ssh_success: bool,
-    holo_network: Option<String>,
-    channel: Option<String>,
-    holoport_model: Option<String>,
-    hosting_info: Option<String>,
-    error: Option<String>,
-    pub alpha_program: Option<bool>,
-    pub assigned_to: Option<String>,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "rocket::serde")]
-#[serde(rename_all = "camelCase")]
-pub struct HostSummary {
-    #[serde(rename = "_id")]
-    pub _id: String,
-    #[serde(rename = "IP")]
-    ip: String,
-    pub timestamp: f64,
-    ssh_success: bool,
-    holo_network: Option<String>,
-    channel: Option<String>,
-    holoport_model: Option<String>,
-    hosting_info: Option<String>,
-    error: Option<String>,
-    pub alpha_program: Option<bool>,
-    pub assigned_to: Option<String>,
-}
-
 // Data schema in `holoports_assignment` collection
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -120,7 +98,8 @@ pub struct Assignment {
 }
 
 // Input type for /hosts/stats endpoint
-// Data schema in collection `holoports_status`
+// Data schema in collection `holoport_status`
+// Note: We wrap each feild value in Option<T> because if the HPOS `netstatd` fails to collect data, it will send null in failed field.
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
@@ -128,12 +107,11 @@ pub struct HostStats {
     pub holo_network: Option<String>,
     pub channel: Option<String>,
     pub holoport_model: Option<String>,
-    pub ssh_status: bool,
-    pub zt_ip: String,
-    pub wan_ip: String,
+    pub ssh_status: Option<bool>,
+    pub zt_ip: Option<String>,
+    pub wan_ip: Option<String>,
     pub holoport_id_base36: String,
-    pub timestamp: String,
-    pub email: String, // >> discuss adding email to `HostStats` schema to use as filter instead of pubkey/hostid
+    pub timestamp: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
