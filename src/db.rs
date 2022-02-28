@@ -154,7 +154,7 @@ pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson:
         None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
     };
 
-    let filter = doc! {"timestamp": {"$gte": cutoff_ms}};
+    let filter = doc!{"timestamp": {"$gte": cutoff_ms}};
 
     Ok(hp_status
         .distinct("name", filter, None)
