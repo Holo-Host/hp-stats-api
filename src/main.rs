@@ -2,13 +2,12 @@ use base64;
 use ed25519_dalek::Signature;
 use mongodb::bson;
 
-#[macro_use]
-use rocket::*;
 use rocket::data::{self, Data, FromData};
 use rocket::http::{Method, Status};
 use rocket::outcome::Outcome::*;
 use rocket::request::Request;
 use rocket::serde::json::Json;
+use rocket::*;
 use rocket::{self, get, post, State};
 
 mod db;
@@ -75,9 +74,9 @@ async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result
 // }
 
 #[launch]
-fn rocket() -> _ {
+async fn rocket() -> _ {
     rocket::build()
-        // .manage(db::init_db_pool().await)
+        .manage(db::init_db_pool().await)
         .mount("/", rocket::routes![index])
         .mount(
             "/hosts/",
@@ -166,9 +165,11 @@ mod test {
 
     #[rocket::async_test]
     async fn hello_world() {
-        let client = Client::tracked(super::rocket()).await;
-        let response = client.get("/").dispatch();
+        let client = Client::tracked(super::rocket().await)
+            .await
+            .expect("valid rocket instance");
+        let response = client.get("/").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string().unwrap(), "Hello, world!");
+        assert_eq!(response.into_string().await.unwrap(), "Hello, world!");
     }
 }
