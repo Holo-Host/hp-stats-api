@@ -1,6 +1,9 @@
 use base64;
 use ed25519_dalek::Signature;
 use mongodb::bson;
+
+#[macro_use]
+use rocket::*;
 use rocket::data::{self, Data, FromData};
 use rocket::http::{Method, Status};
 use rocket::outcome::Outcome::*;
@@ -12,10 +15,16 @@ mod db;
 mod types;
 use types::{ApiError, Capacity, Error400, Error401, HostStats, Result, Uptime};
 
+// #[cfg(test)]
+// mod tests;
+
 #[get("/")]
-async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
-    db::ping_database(&pool.mongo).await
+async fn index() -> &'static str {
+    "Hello, world!"
 }
+// async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
+//     db::ping_database(&pool.mongo).await
+// }
 
 #[get("/<name>/uptime")]
 async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json<Uptime>>> {
@@ -51,18 +60,30 @@ async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result
     Ok(db::add_host_stats(stats, &pool).await?)
 }
 
-#[rocket::main]
-async fn main() -> Result<(), rocket::Error> {
+// #[rocket::main]
+// async fn main() -> Result<(), rocket::Error> {
+//     rocket::build()
+//         .manage(db::init_db_pool().await)
+//         .mount("/", rocket::routes![index])
+//         .mount(
+//             "/hosts/",
+//             rocket::routes![uptime, list_available, list_registered, add_host_stats],
+//         )
+//         .mount("/network/", rocket::routes![capacity])
+//         .launch()
+//         .await
+// }
+
+#[launch]
+fn rocket() -> _ {
     rocket::build()
-        .manage(db::init_db_pool().await)
+        // .manage(db::init_db_pool().await)
         .mount("/", rocket::routes![index])
         .mount(
             "/hosts/",
             rocket::routes![uptime, list_available, list_registered, add_host_stats],
         )
         .mount("/network/", rocket::routes![capacity])
-        .launch()
-        .await
 }
 
 #[rocket::async_trait]
@@ -134,5 +155,20 @@ impl<'r> FromData<'r> for HostStats {
                 "Made an unrecognized api call with the `HostStats` struct as parameters.",
             )),
         ))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::rocket;
+    use rocket::http::Status;
+    use rocket::local::asynchronous::Client;
+
+    #[rocket::async_test]
+    async fn hello_world() {
+        let client = Client::tracked(super::rocket()).await;
+        let response = client.get("/").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.into_string().unwrap(), "Hello, world!");
     }
 }
