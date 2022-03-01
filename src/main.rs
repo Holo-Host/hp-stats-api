@@ -10,13 +10,16 @@ use types::{ApiError, Capacity, HostStats, Result, Uptime};
 // #[cfg(test)]
 // mod tests;
 
-#[get("/")]
-async fn index() -> &'static str {
-    "Hello, world!"
+// TODO: REMOVE - TEMPORARY TEST
+#[get("/test")]
+async fn basic_test() -> &'static str {
+    "Success!"
 }
-// async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
-//     db::ping_database(&pool.mongo).await
-// }
+
+#[get("/")]
+async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
+    db::ping_database(&pool.mongo).await
+}
 
 #[get("/<name>/uptime")]
 async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json<Uptime>>> {
@@ -70,7 +73,7 @@ async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result
 async fn rocket() -> _ {
     rocket::build()
         .manage(db::init_db_pool().await)
-        .mount("/", rocket::routes![index])
+        .mount("/", rocket::routes![index, basic_test])
         .mount(
             "/hosts/",
             rocket::routes![uptime, list_available, list_registered, add_host_stats],
@@ -81,16 +84,49 @@ async fn rocket() -> _ {
 #[cfg(test)]
 mod test {
     use super::rocket;
+    use rocket::http::ContentType;
+    use rocket::http::Header;
     use rocket::http::Status;
     use rocket::local::asynchronous::Client;
 
+    use crate::types;
+    use types::HostStats;
+
+    // #[rocket::async_test]
+    // async fn basic_test() {
+    //     let client = Client::tracked(super::rocket().await)
+    //         .await
+    //         .expect("valid rocket instance");
+    //     let response = client.get("/test").dispatch().await;
+    //     assert_eq!(response.status(), Status::Ok);
+    //     assert_eq!(response.into_string().await.unwrap(), "Success!");
+    // }
+
     #[rocket::async_test]
-    async fn hello_world() {
+    async fn add_host_stats() {
+        let payload = HostStats {
+            holo_network: Some("holo_network".to_string()),
+            channel: Some("channel".to_string()),
+            holoport_model: Some("holoport_model".to_string()),
+            ssh_status: Some(true),
+            zt_ip: Some("zt_ip".to_string()),
+            wan_ip: Some("wan_ip".to_string()),
+            holoport_id: "4sycear14xnlwjiopbqm7k085qntog2oeps47c6lmvee33xjco".to_string(),
+            timestamp: Some("timestamp".to_string()),
+        };
+
+        let valid_signature = "oAcrxO0Xn2/Rub7BsNLgYRE1Km8Hn/+eWeYf2hpFziQ3qRRzwOEdEm+L9UvZK6FDLJf//BNPQrrTAZW0X6doAw";
+
         let client = Client::tracked(super::rocket().await)
             .await
             .expect("valid rocket instance");
-        let response = client.get("/").dispatch().await;
+        let response = client
+            .post("/hosts/stats")
+            .json(&payload)
+            .header(ContentType::JSON)
+            .header(Header::new("x-hpos-signature", valid_signature))
+            .dispatch()
+            .await;
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string().await.unwrap(), "Hello, world!");
     }
 }
