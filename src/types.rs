@@ -110,7 +110,7 @@ pub struct HostStats {
     pub ssh_status: Option<bool>,
     pub zt_ip: Option<String>,
     pub wan_ip: Option<String>,
-    pub holoport_id_base36: String,
+    pub holoport_id: String,
     pub timestamp: Option<String>,
 }
 

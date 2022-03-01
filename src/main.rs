@@ -112,7 +112,7 @@ impl<'r> FromData<'r> for HostStats {
             };
             let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
 
-            let ed25519_pubkey = db::decode_pubkey(&host_stats.holoport_id_base36);
+            let ed25519_pubkey = db::decode_pubkey(&host_stats.holoport_id);
 
             // TEMP NOTE: comment out for manual postman test - sig not verifiable
             return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {

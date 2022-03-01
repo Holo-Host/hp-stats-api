@@ -154,7 +154,7 @@ pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson:
         None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
     };
 
-    let filter = doc!{"timestamp": {"$gte": cutoff_ms}};
+    let filter = doc! {"timestamp": {"$gte": cutoff_ms}};
 
     Ok(hp_status
         .distinct("name", filter, None)
@@ -193,7 +193,7 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "ssh_status": hs.ssh_status,
         "zt_ip": hs.zt_ip,
         "wan_ip": hs.wan_ip,
-        "holoport_id_base36": hs.holoport_id_base36,
+        "holoport_id": hs.holoport_id,
         "timestamp": hs.timestamp
     };
     match hp_status.insert_one(val.clone(), None).await {
@@ -249,7 +249,7 @@ pub fn decode_pubkey(holoport_id: &str) -> PublicKey {
 }
 
 pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result<(), ApiError> {
-    let ed25519_pubkey = decode_pubkey(&stats.holoport_id_base36);
+    let ed25519_pubkey = decode_pubkey(&stats.holoport_id);
 
     // Confirm host exists in registration records
     let _ = verify_host(to_holochain_encoded_agent_key(&ed25519_pubkey), &pool.mongo)
@@ -269,7 +269,7 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
         ssh_status: stats.ssh_status,
         zt_ip: stats.zt_ip,
         wan_ip: stats.wan_ip,
-        holoport_id_base36: stats.holoport_id_base36,
+        holoport_id: stats.holoport_id,
         timestamp: Some(format!("{:?}", SystemTime::now())),
     };
     add_holoport_status(holoport_status, &pool.mongo).await?;
