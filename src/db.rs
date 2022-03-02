@@ -6,6 +6,7 @@ use rocket::response::Debug;
 use rocket::State;
 use std::env::var;
 use std::time::{Duration, SystemTime};
+use std::convert::TryFrom;
 
 use ed25519_dalek::PublicKey;
 use hpos_config_core::public_key::to_holochain_encoded_agent_key;
@@ -270,7 +271,10 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
         zt_ip: stats.zt_ip,
         wan_ip: stats.wan_ip,
         holoport_id: stats.holoport_id,
-        timestamp: Some(format!("{:?}", SystemTime::now())),
+        timestamp: SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .ok()
+            .map(|t| i64::try_from(t.as_secs()).ok().unwrap_or(0)),
     };
     add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())

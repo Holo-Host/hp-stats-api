@@ -119,7 +119,7 @@ pub struct HostStats {
     pub zt_ip: Option<String>,
     pub wan_ip: Option<String>,
     pub holoport_id: String,
-    pub timestamp: Option<String>,
+    pub timestamp: Option<i64>,
 }
 
 #[rocket::async_trait]
