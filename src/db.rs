@@ -6,6 +6,7 @@ use rocket::response::Debug;
 use rocket::State;
 use std::env::var;
 use std::time::{Duration, SystemTime};
+use std::convert::TryFrom;
 
 use ed25519_dalek::PublicKey;
 use hpos_config_core::public_key::to_holochain_encoded_agent_key;
@@ -187,13 +188,13 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
     let hp_status: Collection<Document> =
         db.database("host_statistics").collection("holoport_status");
     let val = doc! {
-        "holo_network": hs.holo_network,
+        "holoNetwork": hs.holo_network,
         "channel": hs.channel,
-        "holoport_model": hs.holoport_model,
-        "ssh_status": hs.ssh_status,
-        "zt_ip": hs.zt_ip,
-        "wan_ip": hs.wan_ip,
-        "holoport_id": hs.holoport_id,
+        "holoportModel": hs.holoport_model,
+        "sshStatus": hs.ssh_status,
+        "ztIp": hs.zt_ip,
+        "wanIp": hs.wan_ip,
+        "holoportId": hs.holoport_id,
         "timestamp": hs.timestamp
     };
     match hp_status.insert_one(val.clone(), None).await {
@@ -270,7 +271,10 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
         zt_ip: stats.zt_ip,
         wan_ip: stats.wan_ip,
         holoport_id: stats.holoport_id,
-        timestamp: Some(format!("{:?}", SystemTime::now())),
+        timestamp: SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .ok()
+            .map(|t| i64::try_from(t.as_secs()).ok().unwrap_or(0)),
     };
     add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())
