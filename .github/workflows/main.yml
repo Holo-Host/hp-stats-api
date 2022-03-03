@@ -44,4 +44,4 @@ jobs:
           mongodb-port: 27017
 
       - name: Run cargo test
-        run: MONGO_URI="mongodb://127.0.0.1:27017" cargo test
+        run: MONGO_URI="mongodb://127.0.0.1:27017" cargo test -- --nocapture
