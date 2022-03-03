@@ -9,9 +9,14 @@ on:
 name: API Testing CI
 
 jobs:
-  lints:
-    name: Lints
+  test:
+    name: Test Suite
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        mongodb-version: ["5.0"]
+
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -23,24 +28,20 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          components: rustfmt, clippy
           toolchain: 1.58.1
           override: true
 
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.7.0
         with:
-          command: fmt
-          args: --all -- --check
+          mongodb-version: ${{ matrix.mongodb-version }}
+          mongodb-port: 27017
 
-      - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+      - name: Run cargo test
+        run: MONGO_URI="mongodb://127.0.0.1:27017" cargo test
