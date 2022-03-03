@@ -91,8 +91,8 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
 // Ignores records older than <cutoff> days
 pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostStats>, ApiError> {
     let cutoff_ms = match get_cutoff_timestamp(cutoff) {
-      Some(x) => x,
-      None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
+        Some(x) => x,
+        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
     };
 
     let hp_status: Collection<HostStats> =
