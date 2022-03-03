@@ -1,5 +1,5 @@
-# match-service-api
-Public API for Holo's match service
+# hp-stats-api
+Public API for collecting and reading statistics on holoports and holo network
 
 Endpoints:
 
@@ -73,6 +73,25 @@ GET
   "source_chain": 300 // Hosts that have at least 90% uptime in last 7 days
 }
 ```
+
+POST
+`/hosts/stats`
+
+payload:
+```json
+{
+  "holoNetwork": <string>  # can be one of devNet, alphaNet, flexNet...
+  "channel" : <string>     # nix-channel that HPOS is following
+  "holoportModel": <string> # HP or HP+
+  "sshStatus": <bool>      # is SSH enabled?
+  "ztIp": <string>         # IP address on Zerotier network
+  "wanIp": <string>        # IPv4 address on internet
+  "holoportId": <string>   # base36 encoded public key of the host
+  "timestamp": <string>    # updated on API server
+}
+```
+
+#### `200 OK`
 
 # Prerequisites
 
