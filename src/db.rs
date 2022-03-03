@@ -1,15 +1,23 @@
-use mongodb::bson::{self, doc};
+use mongodb::bson::{self, doc, Document};
 use mongodb::options::AggregateOptions;
 use mongodb::{Client, Collection};
 use rocket::futures::TryStreamExt;
 use rocket::response::Debug;
-use std::collections::HashMap;
+use rocket::State;
 use std::env::var;
-use std::time::{SystemTime, Duration};
+use std::time::{Duration, SystemTime};
+use std::convert::TryFrom;
 
-use crate::types::{Assignment, Capacity, Host, HostSummary, Performance, Result, Uptime, ListAvailableError, BadRequest};
+use ed25519_dalek::PublicKey;
+use hpos_config_core::public_key::to_holochain_encoded_agent_key;
 
-const DAYS_TOO_LARGE: BadRequest = BadRequest("Days specified is too large. Cutoff is earlier than start of unix epoch");
+use crate::types::{
+    ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance, Result,
+    Uptime,
+};
+
+const DAYS_TOO_LARGE: Error400 =
+    Error400::Message("Days specified is too large. Cutoff is earlier than start of unix epoch");
 
 // AppDbPool is managed by Rocket as a State, which means it is available across threads.
 // Type mongodb::Database (starting v2.0.0 of mongodb driver) represents a connection pool to db,
@@ -21,6 +29,7 @@ pub struct AppDbPool {
 // Initialize database and return in form of an AppDbPool
 pub async fn init_db_pool() -> AppDbPool {
     let mongo_uri: String = var("MONGO_URI").expect("MONGO_URI must be set in the env");
+
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
 
     AppDbPool { mongo: client }
@@ -78,36 +87,22 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
         .map_err(Debug)
 }
 
-// Return the most recent record for hosts stored in `holoports_status` collection that have a successful SSH record
+// Return the most recent record for hosts stored in `holoport_status` collection that have a successful SSH record
 // Ignores records older than <cutoff> days
-pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSummary>, ListAvailableError> {
-    // Retrieve and store in memory all holoport assignments
-    let hp_assignment: Collection<Assignment> = db
-        .database("host_statistics")
-        .collection("alpha_program_holoports");
-
-    let mut cursor = hp_assignment.find(None, None).await.map_err(Debug).map_err(ListAvailableError::Database)?;
-
-    let mut assignment_map = HashMap::new();
-
-    while let Some(a) = cursor.try_next().await.map_err(Debug).map_err(ListAvailableError::Database)? {
-        assignment_map.insert(a.name, "");
-    }
-
-    // Retrieve all holoport statuses and format for an API response
-    let hp_status: Collection<Host> = db
-        .database("host_statistics")
-        .collection("holoports_status");
-
+pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostStats>, ApiError> {
     let cutoff_ms = match get_cutoff_timestamp(cutoff) {
-        Some(x) => x,
-        None => return Err(ListAvailableError::BadRequest(DAYS_TOO_LARGE))
+      Some(x) => x,
+      None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
     };
+
+    let hp_status: Collection<HostStats> =
+        db.database("host_statistics").collection("holoport_status");
+
     let pipeline = vec![
         doc! {
             // only successful ssh results in last <cutoff> days
             "$match": {
-                "sshSuccess": true,
+                "sshStatus": true,
                 "timestamp": {"$gte": cutoff_ms}
             }
         },
@@ -120,51 +115,53 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSu
         doc! {
             "$group": {
                 "_id": "$name",
-                "IP": {"$first": "$IP"},
-                "timestamp": {"$first": "$timestamp"},
-                "sshSuccess": {"$first": "$sshSuccess"},
                 "holoNetwork": {"$first": "$holoNetwork"},
                 "channel": {"$first": "$channel"},
                 "holoportModel": {"$first": "$holoportModel"},
-                "hostingInfo": {"$first": "$hostingInfo"},
-                "error": {"$first": "$error"},
+                "sshStatus": {"$first": "$sshStatus"},
+                "ztIp": {"$first": "$ztIp"},
+                "wanIp": {"$first": "$wanIp"},
+                "holoportId": {"$first": "$holoportId"},
+                "timestamp": {"$first": "$timestamp"},
             }
         },
     ];
 
     let options = AggregateOptions::builder().allow_disk_use(true).build();
-     
-    let cursor = hp_status.aggregate(pipeline, Some(options)).await.map_err(Debug).map_err(ListAvailableError::Database)?;
+
+    let cursor = hp_status
+        .aggregate(pipeline, Some(options))
+        .await
+        .map_err(Debug)
+        .map_err(ApiError::Database)?;
 
     // Update fields alpha_test and assigned_to based on the content of assignment_map
-    let cursor_extended = cursor.try_filter_map(|host| async {
-        let mut host: HostSummary = bson::from_document(host)?;
-        if let Some(assigned_to) = assignment_map.get(&host._id) {
-            host.alpha_program = Some(true);
-            host.assigned_to = Some(assigned_to.to_string());
-        }
-
-        Ok(Some(host))
-    });
-
-    cursor_extended.try_collect().await.map_err(Debug).map_err(ListAvailableError::Database)
+    cursor
+        .try_filter_map(|host| async { Ok(Some(bson::from_document(host)?)) })
+        .try_collect()
+        .await
+        .map_err(Debug)
+        .map_err(ApiError::Database)
 }
 
 // This gets a list of all HPs including those not SSH'd
-pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson::Bson>, ListAvailableError> {
+pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson::Bson>, ApiError> {
     // Retrieve all holoport statuses and format for an API response
-    let hp_status: Collection<Host> = db
-        .database("host_statistics")
-        .collection("holoports_status");
+    let hp_status: Collection<HostStats> =
+        db.database("host_statistics").collection("holoport_status");
 
     let cutoff_ms = match get_cutoff_timestamp(cutoff) {
         Some(x) => x,
-        None => return Err(ListAvailableError::BadRequest(DAYS_TOO_LARGE))
+        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
     };
 
-    let filter = doc!{"timestamp": {"$gte": cutoff_ms}};  
+    let filter = doc! {"timestamp": {"$gte": cutoff_ms}};
 
-    Ok(hp_status.distinct("name", filter, None).await.map_err(Debug).map_err(ListAvailableError::Database)?)
+    Ok(hp_status
+        .distinct("name", filter, None)
+        .await
+        .map_err(Debug)
+        .map_err(ApiError::Database)?)
 }
 
 // Helper function to get cutoff timestamp for filter
@@ -176,9 +173,109 @@ fn get_cutoff_timestamp(days: u64) -> Option<i64> {
         .expect("SystemTime should be after unix epoch");
     let valid_duration = Duration::from_secs(60 * 60 * 24 * days);
 
-    let cutoff_timestamp = current_timestamp
-    .checked_sub(valid_duration)?;
+    let cutoff_timestamp = current_timestamp.checked_sub(valid_duration)?;
     use std::convert::TryInto;
-    Some(cutoff_timestamp.as_millis().try_into().expect("We should be fewer than 2^63 milliseconds since start of unix epoch"))
+    Some(
+        cutoff_timestamp
+            .as_secs()
+            .try_into()
+            .expect("We should be fewer than 2^63 milliseconds since start of unix epoch"),
+    )
 }
 
+// Add values to the collection `holoport_status`
+pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiError> {
+    let hp_status: Collection<Document> =
+        db.database("host_statistics").collection("holoport_status");
+    let val = doc! {
+        "holoNetwork": hs.holo_network,
+        "channel": hs.channel,
+        "holoportModel": hs.holoport_model,
+        "sshStatus": hs.ssh_status,
+        "ztIp": hs.zt_ip,
+        "wanIp": hs.wan_ip,
+        "holoportId": hs.holoport_id,
+        "timestamp": hs.timestamp
+    };
+    match hp_status.insert_one(val.clone(), None).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(ApiError::Database(Debug(e))),
+    }
+}
+
+/// Ops Console DB:
+// Find registration values for host identified in the `opsconsoledb` collection `registration`
+// and determine whether the provided host pub key exists within record
+pub async fn verify_host(pub_key: String, db: &Client) -> Result<(), ApiError> {
+    let records: Collection<HostRegistration> =
+        db.database("opsconsoledb").collection("registration");
+
+    let mut host_registrations = match records.find(None, None).await {
+        Ok(cursor) => cursor,
+        Err(e) => return Err(ApiError::Database(Debug(e))),
+    };
+
+    let mut host_collection = Vec::new();
+
+    while let Some(hr) = host_registrations
+        .try_next()
+        .await
+        .map_err(Debug)
+        .map_err(ApiError::Database)?
+    {
+        host_collection.push(hr);
+    }
+
+    if let Some(found) = host_collection.iter().find_map(|hr| {
+        Some(
+            hr.registration_code
+                .iter()
+                .any(|r| r.agent_pub_keys.iter().any(|keys| keys.pub_key == pub_key)),
+        )
+    }) {
+        if found {
+            return Ok(());
+        }
+    }
+
+    Err(ApiError::MissingRecord(Error404::Info(format!(
+        "No host found with provided public key. {:?}",
+        pub_key
+    ))))
+}
+
+pub fn decode_pubkey(holoport_id: &str) -> PublicKey {
+    let decoded_pubkey = base36::decode(holoport_id).unwrap();
+    PublicKey::from_bytes(&decoded_pubkey).unwrap()
+}
+
+pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result<(), ApiError> {
+    let ed25519_pubkey = decode_pubkey(&stats.holoport_id);
+
+    // Confirm host exists in registration records
+    let _ = verify_host(to_holochain_encoded_agent_key(&ed25519_pubkey), &pool.mongo)
+        .await
+        .or_else(|e| {
+            return Err(ApiError::MissingRecord(Error404::Info(format!(
+                "Provided host's holoport_id is not registered among valid hosts.  Error: {:?}",
+                e
+            ))));
+        });
+
+    // Add utc timestamp to stats payload and insert into db
+    let holoport_status = HostStats {
+        holo_network: stats.holo_network,
+        channel: stats.channel,
+        holoport_model: stats.holoport_model,
+        ssh_status: stats.ssh_status,
+        zt_ip: stats.zt_ip,
+        wan_ip: stats.wan_ip,
+        holoport_id: stats.holoport_id,
+        timestamp: SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .ok()
+            .map(|t| i64::try_from(t.as_secs()).ok().unwrap_or(0)),
+    };
+    add_holoport_status(holoport_status, &pool.mongo).await?;
+    Ok(())
+}
