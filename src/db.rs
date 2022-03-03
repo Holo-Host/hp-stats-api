@@ -90,14 +90,16 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
 // Return the most recent record for hosts stored in `holoport_status` collection that have a successful SSH record
 // Ignores records older than <cutoff> days
 pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostStats>, ApiError> {
-    // Retrieve all holoport statuses and format for an API response
+    let cutoff_ms = match get_cutoff_timestamp(cutoff) {
+      Some(x) => x,
+      None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
+    };
+
+    println!("{}", cutoff_ms);
+
     let hp_status: Collection<HostStats> =
         db.database("host_statistics").collection("holoport_status");
 
-    let cutoff_ms = match get_cutoff_timestamp(cutoff) {
-        Some(x) => x,
-        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
-    };
     let pipeline = vec![
         doc! {
             // only successful ssh results in last <cutoff> days
@@ -177,7 +179,7 @@ fn get_cutoff_timestamp(days: u64) -> Option<i64> {
     use std::convert::TryInto;
     Some(
         cutoff_timestamp
-            .as_millis()
+            .as_secs()
             .try_into()
             .expect("We should be fewer than 2^63 milliseconds since start of unix epoch"),
     )
