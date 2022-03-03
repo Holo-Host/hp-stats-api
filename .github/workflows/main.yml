@@ -16,27 +16,23 @@ jobs:
 
     steps:
       - name: Fetch source code
-        uses: actions/checkout@v2
-      - name: Use Nix
-        uses: cachix/install-nix-action@v16
-        with:
-          nix_path: nixpkgs=channel:nixos-21.05
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Configure Nix substituters
-        run: |
-          set -xe
-          mkdir -p ~/.config/nix/
-          cp ./.github/nix.conf ~/.config/nix/
-      - uses: cachix/cachix-action@v10
-        with:
-          name: holochain-ci
-          authToken: "${{ secrets.CACHIX_HOLOCHAIN_CI }}"
-      - name: Prepare Nix environment
-        run: nix-shell --command "echo Completed"
-      - name: Check Holochain version
-        run: nix-shell --command "holochain -V"
+        uses:
+          actions/checkout@v2
+          # - name: Login to Docker Hub
+          #      uses: docker/login-action@v1
+          #   with:
+          #     username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          #     password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          # -
+          #   name: Set up Docker Buildx
+          #   uses: docker/setup-buildx-action@v1
+          # -
+          #   name: Build and push
+          #   uses: docker/build-push-action@v2
+          #   with:
+          #     context: .
+          #     file: ./Dockerfile
+          #     push: true
+          # tags: ${{ secrets.DOCKER_HUB_USERNAME }}/simplewhale:latest
       - name: Run Rust tests
-        run: nix-shell --run 'MONGO_URI="mongodb+srv://holo-registration:yG9m9E%25e3ADosW*IcfRmC%26GOPX2pfJb2uoD%5EAMWGE@cluster0.xowdr.mongodb.net" cargo test'
+        run: nix-shell --run 'MONGO_URI="mongodb://127.0.0.1:27017" cargo test'

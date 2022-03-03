@@ -10,12 +10,6 @@ use types::{ApiError, Capacity, HostStats, Result, Uptime};
 #[cfg(test)]
 mod test;
 
-// TODO: REMOVE - TEMPORARY TEST
-#[get("/test")]
-async fn basic_test() -> &'static str {
-    "Success!"
-}
-
 #[get("/")]
 async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
     db::ping_database(&pool.mongo).await
@@ -55,25 +49,11 @@ async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result
     Ok(db::add_host_stats(stats, &pool).await?)
 }
 
-// #[rocket::main]
-// async fn main() -> Result<(), rocket::Error> {
-//     rocket::build()
-//         .manage(db::init_db_pool().await)
-//         .mount("/", rocket::routes![index])
-//         .mount(
-//             "/hosts/",
-//             rocket::routes![uptime, list_available, list_registered, add_host_stats],
-//         )
-//         .mount("/network/", rocket::routes![capacity])
-//         .launch()
-//         .await
-// }
-
 #[launch]
 async fn rocket() -> _ {
     rocket::build()
         .manage(db::init_db_pool().await)
-        .mount("/", rocket::routes![index, basic_test])
+        .mount("/", rocket::routes![index])
         .mount(
             "/hosts/",
             rocket::routes![uptime, list_available, list_registered, add_host_stats],

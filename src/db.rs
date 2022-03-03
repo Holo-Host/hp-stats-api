@@ -4,9 +4,9 @@ use mongodb::{Client, Collection};
 use rocket::futures::TryStreamExt;
 use rocket::response::Debug;
 use rocket::State;
+use std::convert::TryFrom;
 use std::env::var;
 use std::time::{Duration, SystemTime};
-use std::convert::TryFrom;
 
 use ed25519_dalek::PublicKey;
 use hpos_config_core::public_key::to_holochain_encoded_agent_key;
@@ -208,7 +208,7 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
 // and determine whether the provided host pub key exists within record
 pub async fn verify_host(pub_key: String, db: &Client) -> Result<(), ApiError> {
     let records: Collection<HostRegistration> =
-        db.database("opsconsoledb").collection("registration");
+        db.database("opsconsoledb").collection("registrations");
 
     let mut host_registrations = match records.find(None, None).await {
         Ok(cursor) => cursor,
