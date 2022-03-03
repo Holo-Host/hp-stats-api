@@ -95,8 +95,6 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
       None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
     };
 
-    println!("{}", cutoff_ms);
-
     let hp_status: Collection<HostStats> =
         db.database("host_statistics").collection("holoport_status");
 
@@ -123,7 +121,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "sshStatus": {"$first": "$sshStatus"},
                 "ztIp": {"$first": "$ztIp"},
                 "wanIp": {"$first": "$wanIp"},
-                "holoportIdBase36": {"$first": "$holoportIdBase36"},
+                "holoportId": {"$first": "$holoportId"},
                 "timestamp": {"$first": "$timestamp"},
             }
         },
