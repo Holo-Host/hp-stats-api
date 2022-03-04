@@ -155,7 +155,6 @@ impl<'r> FromData<'r> for HostStats {
                 }
             };
 
-            // TEMP NOTE: comment out for manual postman test - sig not verifiable
             let decoded_sig = match base64::decode(signature) {
                 Ok(ds) => ds,
                 Err(e) => {
@@ -171,7 +170,6 @@ impl<'r> FromData<'r> for HostStats {
 
             let ed25519_pubkey = db::decode_pubkey(&host_stats.holoport_id);
 
-            // TEMP NOTE: comment out for manual postman test - sig not verifiable
             return match ed25519_pubkey.verify_strict(&decoded_data.value, &ed25519_sig) {
                 Ok(_) => Success(host_stats),
                 Err(_) => Failure((
@@ -181,9 +179,6 @@ impl<'r> FromData<'r> for HostStats {
                     )),
                 )),
             };
-
-            // TEMP NOTE: comment in for manual postman test - sig not verifiable
-            // return Success(host_stats);
         }
         Failure((
             Status::BadRequest,
@@ -198,21 +193,21 @@ impl<'r> FromData<'r> for HostStats {
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct NumberInt {
-    number_int: u16,
+    pub number_int: u16,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct NumberLong {
-    number_long: u64,
+    pub number_long: u64,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct DateCreated {
-    date: NumberLong,
+    pub date: NumberLong,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -220,16 +215,25 @@ pub struct DateCreated {
 #[serde(rename_all = "camelCase")]
 pub struct AgentPubKeys {
     pub pub_key: String,
-    role: String,
+    pub role: String,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrationCode {
-    code: String,
-    role: String,
+    pub code: String,
+    pub role: String,
     pub agent_pub_keys: Vec<AgentPubKeys>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct OldHoloportIds {
+    pub _id: String,
+    pub processed: bool,
+    pub new_id: String,
 }
 
 // Data schema in database `opsconsoledb`, collection `registration`
@@ -238,14 +242,15 @@ pub struct RegistrationCode {
 #[serde(rename_all = "camelCase")]
 pub struct HostRegistration {
     #[serde(skip)]
-    _id: ObjectId,
+    pub _id: ObjectId,
     #[serde(skip)]
-    _v: NumberInt,
-    given_names: String,
-    last_name: String,
-    is_jurisdiction_not_in_list: bool,
-    legal_jurisdiction: String,
-    created: DateCreated,
-    old_holoport_ids: Vec<String>,
+    pub __v: NumberInt,
+    pub given_names: String,
+    pub email: String,
+    pub last_name: String,
+    pub is_jurisdiction_not_in_list: bool,
+    pub legal_jurisdiction: String,
+    pub created: DateCreated,
+    pub old_holoport_ids: Vec<OldHoloportIds>,
     pub registration_code: Vec<RegistrationCode>,
 }

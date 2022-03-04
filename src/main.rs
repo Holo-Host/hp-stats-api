@@ -1,10 +1,14 @@
 use mongodb::bson;
 use rocket::serde::json::Json;
+use rocket::*;
 use rocket::{self, get, post, State};
 
 mod db;
 mod types;
 use types::{ApiError, Capacity, HostStats, Result, Uptime};
+
+#[cfg(test)]
+mod test;
 
 #[get("/")]
 async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
@@ -45,8 +49,8 @@ async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result
     Ok(db::add_host_stats(stats, &pool).await?)
 }
 
-#[rocket::main]
-async fn main() -> Result<(), rocket::Error> {
+#[launch]
+async fn rocket() -> _ {
     rocket::build()
         .manage(db::init_db_pool().await)
         .mount("/", rocket::routes![index])
@@ -55,6 +59,4 @@ async fn main() -> Result<(), rocket::Error> {
             rocket::routes![uptime, list_available, list_registered, add_host_stats],
         )
         .mount("/network/", rocket::routes![capacity])
-        .launch()
-        .await
 }
