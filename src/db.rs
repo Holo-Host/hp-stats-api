@@ -12,7 +12,7 @@ use ed25519_dalek::PublicKey;
 use hpos_config_core::public_key::to_holochain_encoded_agent_key;
 
 use crate::types::{
-    ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance, Result,
+    ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, HostLatest, Performance, Result,
     Uptime,
 };
 
@@ -89,7 +89,7 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
 
 // Return the most recent record for hosts stored in `holoport_status` collection that have a successful SSH record
 // Ignores records older than <cutoff> days
-pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostStats>, ApiError> {
+pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostLatest>, ApiError> {
     let cutoff_ms = match get_cutoff_timestamp(cutoff) {
         Some(x) => x,
         None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
@@ -134,7 +134,6 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
         .map_err(Debug)
         .map_err(ApiError::Database)?;
 
-    // Update fields alpha_test and assigned_to based on the content of assignment_map
     cursor
         .try_filter_map(|host| async { Ok(Some(bson::from_document(host)?)) })
         .try_collect()

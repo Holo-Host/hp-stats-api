@@ -122,6 +122,22 @@ pub struct HostStats {
     pub timestamp: Option<i64>,
 }
 
+// Type for the list/available endpoint
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct HostLatest {
+    #[serde(rename = "_id")]
+    pub _id: String,
+    pub holo_network: Option<String>,
+    pub channel: Option<String>,
+    pub holoport_model: Option<String>,
+    pub ssh_status: Option<bool>,
+    pub zt_ip: Option<String>,
+    pub wan_ip: Option<String>,
+    pub timestamp: Option<i64>,
+}
+
 #[rocket::async_trait]
 impl<'r> FromData<'r> for HostStats {
     type Error = ApiError;

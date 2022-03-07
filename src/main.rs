@@ -5,7 +5,7 @@ use rocket::{self, get, post, State};
 
 mod db;
 mod types;
-use types::{ApiError, Capacity, HostStats, Result, Uptime};
+use types::{ApiError, Capacity, HostStats, HostLatest, Result, Uptime};
 
 #[cfg(test)]
 mod test;
@@ -27,7 +27,7 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
 async fn list_available(
     days: u64,
     pool: &State<db::AppDbPool>,
-) -> Result<Json<Vec<HostStats>>, ApiError> {
+) -> Result<Json<Vec<HostLatest>>, ApiError> {
     Ok(Json(db::list_available_hosts(&pool.mongo, days).await?))
 }
 
