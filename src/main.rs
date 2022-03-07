@@ -5,7 +5,7 @@ use rocket::{self, get, post, State};
 
 mod db;
 mod types;
-use types::{ApiError, Capacity, HostStats, HostLatest, Result, Uptime};
+use types::{ApiError, Capacity, HostLatest, HostStats, Result, Uptime};
 
 #[cfg(test)]
 mod test;
