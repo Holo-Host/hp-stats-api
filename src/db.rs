@@ -114,14 +114,13 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
         },
         doc! {
             "$group": {
-                "_id": "$name",
+                "_id": "$holoportId",
                 "holoNetwork": {"$first": "$holoNetwork"},
                 "channel": {"$first": "$channel"},
                 "holoportModel": {"$first": "$holoportModel"},
                 "sshStatus": {"$first": "$sshStatus"},
                 "ztIp": {"$first": "$ztIp"},
                 "wanIp": {"$first": "$wanIp"},
-                "holoportId": {"$first": "$holoportId"},
                 "timestamp": {"$first": "$timestamp"},
             }
         },
@@ -158,7 +157,7 @@ pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson:
     let filter = doc! {"timestamp": {"$gte": cutoff_ms}};
 
     Ok(hp_status
-        .distinct("name", filter, None)
+        .distinct("holoportId", filter, None)
         .await
         .map_err(Debug)
         .map_err(ApiError::Database)?)
