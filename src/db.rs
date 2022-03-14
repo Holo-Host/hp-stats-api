@@ -122,6 +122,11 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "ztIp": {"$first": "$ztIp"},
                 "wanIp": {"$first": "$wanIp"},
                 "timestamp": {"$first": "$timestamp"},
+                "hposAppHealthMap": {"$first": "$hposAppHealthMap"},
+                "runningReadOnlyHapps": {"$first": "$runningReadOnlyHapps"},
+                "runningSlCells": {"$first": "$runningSlCells"},
+                "runningCoreHapps": {"$first": "$runningCoreHapps"},
+                "installedAppMap": {"$first": "$installedAppMap"}
             }
         },
     ];
@@ -194,7 +199,12 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "ztIp": hs.zt_ip,
         "wanIp": hs.wan_ip,
         "holoportId": hs.holoport_id,
-        "timestamp": hs.timestamp
+        "timestamp": hs.timestamp,
+        "hposAppHealthMap": hs.hpos_app_health_map,
+        "runningReadOnlyHapps": hs.running_read_only_happs,
+        "runningSlCells": hs.running_sl_cells,
+        "runningCoreHapps": hs.running_core_happs,
+        "installedAppMap": hs.installed_app_map
     };
     match hp_status.insert_one(val.clone(), None).await {
         Ok(_) => Ok(()),
@@ -274,6 +284,11 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
             .duration_since(SystemTime::UNIX_EPOCH)
             .ok()
             .map(|t| i64::try_from(t.as_secs()).ok().unwrap_or(0)),
+        hpos_app_health_map: stats.hpos_app_health_map,
+        running_read_only_happs: stats.running_read_only_happs,
+        running_sl_cells: stats.running_sl_cells,
+        running_core_happs: stats.running_core_happs,
+        installed_app_map: stats.installed_app_map,
     };
     add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())
