@@ -12,8 +12,8 @@ use ed25519_dalek::PublicKey;
 use hpos_config_core::public_key::to_holochain_encoded_agent_key;
 
 use crate::types::{
-    ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance,
-    Result, Uptime,
+    ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance, Result,
+    Uptime,
 };
 
 const DAYS_TOO_LARGE: Error400 =
@@ -136,7 +136,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "wanIp": "$wanIp",
                 "timestamp":"$timestamp",
               }
-        }
+        },
     ];
 
     let options = AggregateOptions::builder().allow_disk_use(true).build();
