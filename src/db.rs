@@ -180,6 +180,15 @@ fn get_cutoff_timestamp(days: u64) -> Option<i64> {
 pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiError> {
     let hp_status: Collection<Document> =
         db.database("host_statistics").collection("holoport_status");
+    let hpos_app_list =
+        match bson::to_bson(&hs.hpos_app_list) {
+            Ok(bson) => bson,
+            Err(e) => return Err(ApiError::InvalidPayload(Error400::Info(format!(
+                "The `hposAppList` field within the `hosts/stats` payload does not match expected payload. Error: {:?}",
+                e
+            )))),
+        };
+
     let val = doc! {
         "holoNetwork": hs.holo_network,
         "channel": hs.channel,
@@ -189,7 +198,7 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "wanIp": hs.wan_ip,
         "holoportId": hs.holoport_id,
         "timestamp": hs.timestamp,
-        "hposAppList": hs.hpos_app_list,
+        "hposAppList": hpos_app_list,
     };
     match hp_status.insert_one(val.clone(), None).await {
         Ok(_) => Ok(()),
