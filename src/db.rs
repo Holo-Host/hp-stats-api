@@ -129,6 +129,19 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "installedAppMap": {"$first": "$installedAppMap"}
             }
         },
+        doc! {
+            "$project": {
+                "_id": 0,
+                "holoportId": "$_id",
+                "holoNetwork": "$holoNetwork",
+                "channel": "$channel",
+                "holoportModel": "$holoportModel",
+                "sshStatus": "$sshStatus",
+                "ztIp": "$ztIp",
+                "wanIp": "$wanIp",
+                "timestamp":"$timestamp",
+              }
+        },
     ];
 
     let options = AggregateOptions::builder().allow_disk_use(true).build();
@@ -139,33 +152,12 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
         .map_err(Debug)
         .map_err(ApiError::Database)?;
 
-    // Update fields alpha_test and assigned_to based on the content of assignment_map
     cursor
         .try_filter_map(|host| async { Ok(Some(bson::from_document(host)?)) })
         .try_collect()
         .await
         .map_err(Debug)
         .map_err(ApiError::Database)
-}
-
-// This gets a list of all HPs including those not SSH'd
-pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson::Bson>, ApiError> {
-    // Retrieve all holoport statuses and format for an API response
-    let hp_status: Collection<HostStats> =
-        db.database("host_statistics").collection("holoport_status");
-
-    let cutoff_ms = match get_cutoff_timestamp(cutoff) {
-        Some(x) => x,
-        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
-    };
-
-    let filter = doc! {"timestamp": {"$gte": cutoff_ms}};
-
-    Ok(hp_status
-        .distinct("holoportId", filter, None)
-        .await
-        .map_err(Debug)
-        .map_err(ApiError::Database)?)
 }
 
 // Helper function to get cutoff timestamp for filter
