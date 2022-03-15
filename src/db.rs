@@ -184,7 +184,7 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         match bson::to_bson(&hs.hpos_app_list) {
             Ok(bson) => bson,
             Err(e) => return Err(ApiError::InvalidPayload(Error400::Info(format!(
-                "The `hposAppList` field within the `hosts/stats` payload does not match expected payload. Error: {:?}",
+                "The `hposAppList` field within the `hosts/stats` payload does not match expected format. Error: {:?}",
                 e
             )))),
         };
