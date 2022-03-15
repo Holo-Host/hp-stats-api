@@ -31,14 +31,6 @@ async fn list_available(
     Ok(Json(db::list_available_hosts(&pool.mongo, days).await?))
 }
 
-#[get("/registered?<days>")]
-async fn list_registered(
-    days: u64,
-    pool: &State<db::AppDbPool>,
-) -> Result<Json<Vec<bson::Bson>>, ApiError> {
-    Ok(Json(db::list_registered_hosts(&pool.mongo, days).await?))
-}
-
 #[get("/capacity")]
 async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
     Ok(Json(db::network_capacity(&pool.mongo).await?))
@@ -56,7 +48,7 @@ async fn rocket() -> _ {
         .mount("/", rocket::routes![index])
         .mount(
             "/hosts/",
-            rocket::routes![uptime, list_available, list_registered, add_host_stats],
+            rocket::routes![uptime, list_available, add_host_stats],
         )
         .mount("/network/", rocket::routes![capacity])
 }
