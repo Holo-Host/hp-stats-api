@@ -5,7 +5,7 @@ use rocket::{self, get, post, State};
 
 mod db;
 mod types;
-use types::{ApiError, Capacity, HostLatest, HostStats, Result, Uptime};
+use types::{ApiError, Capacity, HostStats, Result, Uptime};
 
 #[cfg(test)]
 mod test;
@@ -27,16 +27,8 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
 async fn list_available(
     days: u64,
     pool: &State<db::AppDbPool>,
-) -> Result<Json<Vec<HostLatest>>, ApiError> {
+) -> Result<Json<Vec<HostStats>>, ApiError> {
     Ok(Json(db::list_available_hosts(&pool.mongo, days).await?))
-}
-
-#[get("/registered?<days>")]
-async fn list_registered(
-    days: u64,
-    pool: &State<db::AppDbPool>,
-) -> Result<Json<Vec<bson::Bson>>, ApiError> {
-    Ok(Json(db::list_registered_hosts(&pool.mongo, days).await?))
 }
 
 #[get("/capacity")]
@@ -56,7 +48,7 @@ async fn rocket() -> _ {
         .mount("/", rocket::routes![index])
         .mount(
             "/hosts/",
-            rocket::routes![uptime, list_available, list_registered, add_host_stats],
+            rocket::routes![uptime, list_available, add_host_stats],
         )
         .mount("/network/", rocket::routes![capacity])
 }
