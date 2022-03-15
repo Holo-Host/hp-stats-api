@@ -122,6 +122,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "ztIp": {"$first": "$ztIp"},
                 "wanIp": {"$first": "$wanIp"},
                 "timestamp": {"$first": "$timestamp"},
+                "hposAppHealthMap": {"$first": "$hposAppHealthMap"},
             }
         },
         doc! {
@@ -135,6 +136,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "ztIp": "$ztIp",
                 "wanIp": "$wanIp",
                 "timestamp":"$timestamp",
+                "hposAppHealthMap": "$hposAppHealthMap",
               }
         },
     ];
@@ -186,7 +188,8 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "ztIp": hs.zt_ip,
         "wanIp": hs.wan_ip,
         "holoportId": hs.holoport_id,
-        "timestamp": hs.timestamp
+        "timestamp": hs.timestamp,
+        "hposAppHealthMap": hs.hpos_app_health_map,
     };
     match hp_status.insert_one(val.clone(), None).await {
         Ok(_) => Ok(()),
@@ -266,6 +269,7 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
             .duration_since(SystemTime::UNIX_EPOCH)
             .ok()
             .map(|t| i64::try_from(t.as_secs()).ok().unwrap_or(0)),
+        hpos_app_health_map: stats.hpos_app_health_map,
     };
     add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())
