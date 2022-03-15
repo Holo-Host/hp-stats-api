@@ -12,7 +12,7 @@ use ed25519_dalek::PublicKey;
 use hpos_config_core::public_key::to_holochain_encoded_agent_key;
 
 use crate::types::{
-    ApiError, Capacity, Error400, Error404, HostLatest, HostRegistration, HostStats, Performance,
+    ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance,
     Result, Uptime,
 };
 
@@ -89,7 +89,7 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
 
 // Return the most recent record for hosts stored in `holoport_status` collection that have a successful SSH record
 // Ignores records older than <cutoff> days
-pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostLatest>, ApiError> {
+pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostStats>, ApiError> {
     let cutoff_ms = match get_cutoff_timestamp(cutoff) {
         Some(x) => x,
         None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
@@ -124,6 +124,19 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostLa
                 "timestamp": {"$first": "$timestamp"},
             }
         },
+        doc! {
+            "$project": {
+                "_id": 0,
+                "holoportId": "$_id",
+                "holoNetwork": "$holoNetwork",
+                "channel": "$channel",
+                "holoportModel": "$holoportModel",
+                "sshStatus": "$sshStatus",
+                "ztIp": "$ztIp",
+                "wanIp": "$wanIp",
+                "timestamp":"$timestamp",
+              }
+        }
     ];
 
     let options = AggregateOptions::builder().allow_disk_use(true).build();
@@ -141,27 +154,6 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostLa
         .map_err(Debug)
         .map_err(ApiError::Database)
 }
-
-// This gets a list of all HPs including those not SSH'd
-pub async fn list_registered_hosts(db: &Client, cutoff: u64) -> Result<Vec<bson::Bson>, ApiError> {
-    // Retrieve all holoport statuses and format for an API response
-    let hp_status: Collection<HostStats> =
-        db.database("host_statistics").collection("holoport_status");
-
-    let cutoff_ms = match get_cutoff_timestamp(cutoff) {
-        Some(x) => x,
-        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
-    };
-
-    let filter = doc! {"timestamp": {"$gte": cutoff_ms}};
-
-    Ok(hp_status
-        .distinct("holoportId", filter, None)
-        .await
-        .map_err(Debug)
-        .map_err(ApiError::Database)?)
-}
-
 // Helper function to get cutoff timestamp for filter
 // We use u64 for days because otherwise we have to recast as u64 in the function, and 4 bytes isn't a big deal here
 // Returns None if days is too large and causes negative timestamp (propagates .checked_sub() which does the same)
