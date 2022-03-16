@@ -6,6 +6,7 @@ use base64::encode_config;
 use ed25519_dalek::*;
 use holochain_conductor_api::{AppStatusFilter, InstalledAppInfo, InstalledAppInfoStatus};
 use holochain_types::{
+    app::{DisabledAppReason, PausedAppReason},
     dna::{AgentPubKey, DnaHash},
     prelude::{CellId, InstalledCell},
 };
@@ -97,11 +98,16 @@ async fn add_host_registration(
     }
 }
 
-fn gen_mock_apps(count: i32) -> Vec<InstalledAppInfo> {
+fn gen_mock_apps(
+    running_count: i32,
+    paused_count: i32,
+    disabled_count: i32,
+) -> Vec<InstalledAppInfo> {
     let mut hpos_apps = Vec::new();
-    for i in 0..count {
+
+    let mut add_app = |number: i32, status: InstalledAppInfoStatus| {
         hpos_apps.push(InstalledAppInfo {
-            installed_app_id: format!("uhCkk...appId{:?}", i),
+            installed_app_id: format!("uhCkk...appId{:?}-{:?}", number, status),
             cell_data: vec![InstalledCell::new(
                 CellId::new(
                     DnaHash::try_from("uhC0k8AVWbDh5OJG6WYOK9SkkNx4qCO9AVEmQSSimyO3-oi7BnXil")
@@ -109,11 +115,34 @@ fn gen_mock_apps(count: i32) -> Vec<InstalledAppInfo> {
                     AgentPubKey::try_from("uhCAkOyRlY09kreaeLDd9-0bp-17DW2N4Vqx1kFodKTXFkrgFiA09")
                         .unwrap(),
                 ),
-                format!("app_role_id_{:?}", i),
+                format!("app_role_id_{:?}-{:?}", number, status),
             )],
-            status: InstalledAppInfoStatus::Running,
+            status: status,
         })
+    };
+
+    for i in 0..running_count {
+        add_app(i, InstalledAppInfoStatus::Running)
     }
+
+    for i in 0..paused_count {
+        add_app(
+            i,
+            InstalledAppInfoStatus::Paused {
+                reason: PausedAppReason::Error("Paused Error Reason".to_string()),
+            },
+        )
+    }
+
+    for i in 0..disabled_count {
+        add_app(
+            i,
+            InstalledAppInfoStatus::Disabled {
+                reason: DisabledAppReason::Error("Disabled Error Reason".to_string()),
+            },
+        )
+    }
+
     hpos_apps
 }
 
@@ -175,16 +204,36 @@ async fn add_host_stats(pass_valid_signature: bool) {
 
     let _ = add_host_registration(host_registration, &client).await;
 
+    let mut paused_count = 0;
+    let mut running_count = 0;
+    let mut disabled_count = 0;
+
     let mut hpos_app_list = HashMap::new();
-    let hpos_happs_mock = gen_mock_apps(6);
+    let hpos_happs_mock = gen_mock_apps(3, 2, 1);
+
     hpos_happs_mock.iter().for_each(|happ| {
         let happ_status = match &happ.status {
-            InstalledAppInfoStatus::Paused { .. } => AppStatusFilter::Paused,
-            InstalledAppInfoStatus::Disabled { .. } => AppStatusFilter::Disabled,
-            InstalledAppInfoStatus::Running => AppStatusFilter::Running,
+            InstalledAppInfoStatus::Paused { .. } => {
+                paused_count += 1;
+                AppStatusFilter::Paused
+            }
+            InstalledAppInfoStatus::Disabled { .. } => {
+                disabled_count += 1;
+                AppStatusFilter::Disabled
+            }
+            InstalledAppInfoStatus::Running => {
+                running_count += 1;
+                AppStatusFilter::Running
+            }
         };
         hpos_app_list.insert(happ.installed_app_id.clone(), happ_status);
     });
+
+    // Test hpos_app_list struct within payload:
+    assert_eq!(hpos_app_list.len(), 6);
+    assert_eq!(disabled_count, 1);
+    assert_eq!(paused_count, 2);
+    assert_eq!(running_count, 3);
 
     // Create payload, sign payload, and call `/host/stats` endpoint, passing valid signature within call header
     let payload = HostStats {
