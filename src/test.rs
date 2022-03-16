@@ -1,15 +1,14 @@
+#![allow(deprecated)]
+
 use super::rocket;
 use anyhow::{Context, Result};
 use base64::encode_config;
 use ed25519_dalek::*;
 use holochain_conductor_api::{AppStatusFilter, InstalledAppInfo, InstalledAppInfoStatus};
-
-#[allow(deprecated)]
 use holochain_types::{
     dna::{AgentPubKey, DnaHash},
     prelude::{CellId, InstalledCell},
 };
-
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use mongodb::Collection;
 use rocket::http::ContentType;
@@ -177,13 +176,6 @@ async fn add_host_stats(pass_valid_signature: bool) {
     let _ = add_host_registration(host_registration, &client).await;
 
     let mut hpos_app_list = HashMap::new();
-    // hpos_app_list.insert("uhCkk...appId1".to_string(), AppStatusFilter::Running);
-    // hpos_app_list.insert("uhCkk...appId2".to_string(), AppStatusFilter::Running);
-    // hpos_app_list.insert("uhCkk...appId3".to_string(), AppStatusFilter::Running);
-    // hpos_app_list.insert("uhCkk...appId4".to_string(), AppStatusFilter::Paused);
-    // hpos_app_list.insert("uhCkk...appId5".to_string(), AppStatusFilter::Paused);
-    // hpos_app_list.insert("uhCkk...appId6".to_string(), AppStatusFilter::Disabled);
-
     let hpos_happs_mock = gen_mock_apps(6);
     hpos_happs_mock.iter().for_each(|happ| {
         let happ_status = match &happ.status {
