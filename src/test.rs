@@ -5,7 +5,10 @@ use ed25519_dalek::*;
 use holochain_conductor_api::{AppStatusFilter, InstalledAppInfo, InstalledAppInfoStatus};
 
 #[allow(deprecated)]
-use holochain_types::prelude::{CellId, HoloHash, InstalledCell};
+use holochain_types::{
+    dna::{AgentPubKey, DnaHash},
+    prelude::{CellId, InstalledCell},
+};
 
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use mongodb::Collection;
@@ -15,6 +18,7 @@ use rocket::http::Status;
 use rocket::local::asynchronous::Client;
 use rocket::response::Debug;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::env::var;
 use test_case::test_case;
 
@@ -99,17 +103,15 @@ fn gen_mock_apps(count: i32) -> Vec<InstalledAppInfo> {
     for i in 0..count {
         hpos_apps.push(InstalledAppInfo {
             installed_app_id: format!("uhCkk...appId{:?}", i),
-            cell_data: vec![InstalledCell {
-                cell_id: CellId(
-                    HoloHash::from_raw_39(HoloHash::get_raw_39(
-                        "uhCkkcF0X1dpwHFeIPI6-7rzM6ma9IgyiqD-othxgENSkL1S",
-                    )),
-                    HoloHash::from_raw_39(HoloHash::get_raw_39(
-                        "uhCAkOyRlY09kreaeLDd9-0bp-17DW2N4Vqx1kFodKTXFkrgFiA09",
-                    )),
+            cell_data: vec![InstalledCell::new(
+                CellId::new(
+                    DnaHash::try_from("uhC0k8AVWbDh5OJG6WYOK9SkkNx4qCO9AVEmQSSimyO3-oi7BnXil")
+                        .unwrap(),
+                    AgentPubKey::try_from("uhCAkOyRlY09kreaeLDd9-0bp-17DW2N4Vqx1kFodKTXFkrgFiA09")
+                        .unwrap(),
                 ),
-                role_id: format!("app_role_id_{:?}", i),
-            }],
+                format!("app_role_id_{:?}", i),
+            )],
             status: InstalledAppInfoStatus::Running,
         })
     }
