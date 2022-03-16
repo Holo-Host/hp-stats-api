@@ -1,4 +1,3 @@
-use mongodb::bson;
 use rocket::serde::json::Json;
 use rocket::*;
 use rocket::{self, get, post, State};
