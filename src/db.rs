@@ -154,6 +154,10 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
         .map_err(Debug)
         .map_err(ApiError::Database)
 }
+<<<<<<< reporting-schema-fix
+=======
+
+>>>>>>> main
 // Helper function to get cutoff timestamp for filter
 // We use u64 for days because otherwise we have to recast as u64 in the function, and 4 bytes isn't a big deal here
 // Returns None if days is too large and causes negative timestamp (propagates .checked_sub() which does the same)
