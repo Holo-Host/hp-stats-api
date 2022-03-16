@@ -1,15 +1,16 @@
-use super::bson::oid::ObjectId;
 use super::rocket;
 use anyhow::{Context, Result};
 use base64::encode_config;
 use ed25519_dalek::*;
-use mongodb::bson::{doc, Document};
+use holochain_conductor_api::AppStatusFilter;
+use mongodb::bson::{doc, oid::ObjectId, Document};
 use mongodb::Collection;
 use rocket::http::ContentType;
 use rocket::http::Header;
 use rocket::http::Status;
 use rocket::local::asynchronous::Client;
 use rocket::response::Debug;
+use std::collections::HashMap;
 use std::env::var;
 use test_case::test_case;
 
@@ -147,6 +148,14 @@ async fn add_host_stats(pass_valid_signature: bool) {
 
     let _ = add_host_registration(host_registration, &client).await;
 
+    let mut hpos_app_list = HashMap::new();
+    hpos_app_list.insert("uhCkk...appId.1".to_string(), AppStatusFilter::Running);
+    hpos_app_list.insert("uhCkk...appId2".to_string(), AppStatusFilter::Running);
+    hpos_app_list.insert("uhCkk...appId3".to_string(), AppStatusFilter::Running);
+    hpos_app_list.insert("uhCkk...appId4".to_string(), AppStatusFilter::Paused);
+    hpos_app_list.insert("uhCkk...appId5".to_string(), AppStatusFilter::Paused);
+    hpos_app_list.insert("uhCkk...appId6".to_string(), AppStatusFilter::Disabled);
+
     // Create payload, sign payload, and call `/host/stats` endpoint, passing valid signature within call header
     let payload = HostStats {
         holo_network: None,
@@ -158,6 +167,7 @@ async fn add_host_stats(pass_valid_signature: bool) {
         // Note: The `holoport_id` must be the base_36 encoded version of the `host_registration.registration_code[i].agent_pub_keys[i].pub_key`
         holoport_id: "1h2di6px7otkjwudmycadu5teaywao46jelpegg7jujncbcbzs".to_string(),
         timestamp: None,
+        hpos_app_list: Some(hpos_app_list),
     };
 
     let signature;
