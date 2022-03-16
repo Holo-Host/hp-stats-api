@@ -2,7 +2,11 @@ use super::rocket;
 use anyhow::{Context, Result};
 use base64::encode_config;
 use ed25519_dalek::*;
-use holochain_conductor_api::AppStatusFilter;
+use holochain_conductor_api::{AppStatusFilter, InstalledAppInfo, InstalledAppInfoStatus};
+
+#[allow(deprecated)]
+use holochain_types::prelude::{CellId, HoloHash, InstalledCell};
+
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use mongodb::Collection;
 use rocket::http::ContentType;
@@ -36,7 +40,7 @@ async fn sign_payload(payload: &HostStats) -> Result<String> {
 }
 
 // Add values to the collection `registrations`
-pub async fn add_host_registration(
+async fn add_host_registration(
     hr: HostRegistration,
     local_db: &mongodb::Client,
 ) -> Result<(), ApiError> {
@@ -88,6 +92,28 @@ pub async fn add_host_registration(
         Ok(_) => Ok(()),
         Err(e) => Err(ApiError::Database(Debug(e))),
     }
+}
+
+fn gen_mock_apps(count: i32) -> Vec<InstalledAppInfo> {
+    let mut hpos_apps = Vec::new();
+    for i in 0..count {
+        hpos_apps.push(InstalledAppInfo {
+            installed_app_id: format!("uhCkk...appId{:?}", i),
+            cell_data: vec![InstalledCell {
+                cell_id: CellId(
+                    HoloHash::from_raw_39(HoloHash::get_raw_39(
+                        "uhCkkcF0X1dpwHFeIPI6-7rzM6ma9IgyiqD-othxgENSkL1S",
+                    )),
+                    HoloHash::from_raw_39(HoloHash::get_raw_39(
+                        "uhCAkOyRlY09kreaeLDd9-0bp-17DW2N4Vqx1kFodKTXFkrgFiA09",
+                    )),
+                ),
+                role_id: format!("app_role_id_{:?}", i),
+            }],
+            status: InstalledAppInfoStatus::Running,
+        })
+    }
+    hpos_apps
 }
 
 #[rocket::async_test]
@@ -149,12 +175,22 @@ async fn add_host_stats(pass_valid_signature: bool) {
     let _ = add_host_registration(host_registration, &client).await;
 
     let mut hpos_app_list = HashMap::new();
-    hpos_app_list.insert("uhCkk...appId.1".to_string(), AppStatusFilter::Running);
-    hpos_app_list.insert("uhCkk...appId2".to_string(), AppStatusFilter::Running);
-    hpos_app_list.insert("uhCkk...appId3".to_string(), AppStatusFilter::Running);
-    hpos_app_list.insert("uhCkk...appId4".to_string(), AppStatusFilter::Paused);
-    hpos_app_list.insert("uhCkk...appId5".to_string(), AppStatusFilter::Paused);
-    hpos_app_list.insert("uhCkk...appId6".to_string(), AppStatusFilter::Disabled);
+    // hpos_app_list.insert("uhCkk...appId1".to_string(), AppStatusFilter::Running);
+    // hpos_app_list.insert("uhCkk...appId2".to_string(), AppStatusFilter::Running);
+    // hpos_app_list.insert("uhCkk...appId3".to_string(), AppStatusFilter::Running);
+    // hpos_app_list.insert("uhCkk...appId4".to_string(), AppStatusFilter::Paused);
+    // hpos_app_list.insert("uhCkk...appId5".to_string(), AppStatusFilter::Paused);
+    // hpos_app_list.insert("uhCkk...appId6".to_string(), AppStatusFilter::Disabled);
+
+    let hpos_happs_mock = gen_mock_apps(6);
+    hpos_happs_mock.iter().for_each(|happ| {
+        let happ_status = match &happ.status {
+            InstalledAppInfoStatus::Paused { .. } => AppStatusFilter::Paused,
+            InstalledAppInfoStatus::Disabled { .. } => AppStatusFilter::Disabled,
+            InstalledAppInfoStatus::Running => AppStatusFilter::Running,
+        };
+        hpos_app_list.insert(happ.installed_app_id.clone(), happ_status);
+    });
 
     // Create payload, sign payload, and call `/host/stats` endpoint, passing valid signature within call header
     let payload = HostStats {
