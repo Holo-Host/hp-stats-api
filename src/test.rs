@@ -229,7 +229,7 @@ async fn add_host_stats(pass_valid_signature: bool) {
         hpos_app_list.insert(happ.installed_app_id.clone(), happ_status);
     });
 
-    // Test hpos_app_list struct within payload:
+    // Test hpos_app_list count and status:
     assert_eq!(hpos_app_list.len(), 6);
     assert_eq!(disabled_count, 1);
     assert_eq!(paused_count, 2);
@@ -255,6 +255,7 @@ async fn add_host_stats(pass_valid_signature: bool) {
         signature = sign_payload(&payload).await.unwrap();
         status = Status::Ok;
     } else {
+        // Provide a valid signature signed with incorrect keys to test unauth'd case
         signature =
             "oAcrxO0Xn2/Rub7BsNLgYRE1Km8Hn/+eWeYf2hpFziQ3qRRzwOEdEm+L9UvZK6FDLJf//BNPQrrTAZW0X6doAw"
                 .to_string();
