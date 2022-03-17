@@ -122,6 +122,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "ztIp": {"$first": "$ztIp"},
                 "wanIp": {"$first": "$wanIp"},
                 "timestamp": {"$first": "$timestamp"},
+                "hposAppList": {"$first": "$hposAppList"},
             }
         },
         doc! {
@@ -135,6 +136,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "ztIp": "$ztIp",
                 "wanIp": "$wanIp",
                 "timestamp":"$timestamp",
+                "hposAppList": "$hposAppList",
               }
         },
     ];
@@ -178,6 +180,15 @@ fn get_cutoff_timestamp(days: u64) -> Option<i64> {
 pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiError> {
     let hp_status: Collection<Document> =
         db.database("host_statistics").collection("holoport_status");
+    let hpos_app_list =
+        match bson::to_bson(&hs.hpos_app_list) {
+            Ok(bson) => bson,
+            Err(e) => return Err(ApiError::InvalidPayload(Error400::Info(format!(
+                "The `hposAppList` field within the `hosts/stats` payload does not match expected format. Error: {:?}",
+                e
+            )))),
+        };
+
     let val = doc! {
         "holoNetwork": hs.holo_network,
         "channel": hs.channel,
@@ -186,7 +197,8 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "ztIp": hs.zt_ip,
         "wanIp": hs.wan_ip,
         "holoportId": hs.holoport_id,
-        "timestamp": hs.timestamp
+        "timestamp": hs.timestamp,
+        "hposAppList": hpos_app_list,
     };
     match hp_status.insert_one(val.clone(), None).await {
         Ok(_) => Ok(()),
@@ -266,6 +278,7 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
             .duration_since(SystemTime::UNIX_EPOCH)
             .ok()
             .map(|t| i64::try_from(t.as_secs()).ok().unwrap_or(0)),
+        hpos_app_list: stats.hpos_app_list,
     };
     add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())

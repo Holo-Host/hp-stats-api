@@ -8,6 +8,10 @@ use rocket::{
     response::Responder,
     serde::{Deserialize, Serialize},
 };
+use std::collections::HashMap;
+
+use holochain_conductor_api::AppStatusFilter;
+use holochain_types::app::InstalledAppId;
 
 use bson::oid::ObjectId;
 use mongodb::{bson, error::Error};
@@ -120,6 +124,7 @@ pub struct HostStats {
     pub wan_ip: Option<String>,
     pub holoport_id: String,
     pub timestamp: Option<i64>,
+    pub hpos_app_list: Option<HashMap<InstalledAppId, AppStatusFilter>>,
 }
 
 #[rocket::async_trait]
