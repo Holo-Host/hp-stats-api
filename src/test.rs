@@ -1,8 +1,15 @@
+#![allow(deprecated)]
+
 use super::rocket;
 use anyhow::{Context, Result};
 use base64::encode_config;
 use ed25519_dalek::*;
-use holochain_conductor_api::AppStatusFilter;
+use holochain_conductor_api::{AppStatusFilter, InstalledAppInfo, InstalledAppInfoStatus};
+use holochain_types::{
+    app::{DisabledAppReason, PausedAppReason},
+    dna::{AgentPubKey, DnaHash},
+    prelude::{CellId, InstalledCell},
+};
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use mongodb::Collection;
 use rocket::http::ContentType;
@@ -11,6 +18,7 @@ use rocket::http::Status;
 use rocket::local::asynchronous::Client;
 use rocket::response::Debug;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::env::var;
 use test_case::test_case;
 
@@ -36,7 +44,7 @@ async fn sign_payload(payload: &HostStats) -> Result<String> {
 }
 
 // Add values to the collection `registrations`
-pub async fn add_host_registration(
+async fn add_host_registration(
     hr: HostRegistration,
     local_db: &mongodb::Client,
 ) -> Result<(), ApiError> {
@@ -88,6 +96,54 @@ pub async fn add_host_registration(
         Ok(_) => Ok(()),
         Err(e) => Err(ApiError::Database(Debug(e))),
     }
+}
+
+fn gen_mock_apps(
+    running_count: i32,
+    paused_count: i32,
+    disabled_count: i32,
+) -> Vec<InstalledAppInfo> {
+    let mut hpos_apps = Vec::new();
+
+    let mut add_app = |number: i32, status: InstalledAppInfoStatus| {
+        hpos_apps.push(InstalledAppInfo {
+            installed_app_id: format!("uhCkk...appId{:?}-{:?}", number, status),
+            cell_data: vec![InstalledCell::new(
+                CellId::new(
+                    DnaHash::try_from("uhC0k8AVWbDh5OJG6WYOK9SkkNx4qCO9AVEmQSSimyO3-oi7BnXil")
+                        .unwrap(),
+                    AgentPubKey::try_from("uhCAkOyRlY09kreaeLDd9-0bp-17DW2N4Vqx1kFodKTXFkrgFiA09")
+                        .unwrap(),
+                ),
+                format!("app_role_id_{:?}-{:?}", number, status),
+            )],
+            status: status,
+        })
+    };
+
+    for i in 0..running_count {
+        add_app(i, InstalledAppInfoStatus::Running)
+    }
+
+    for i in 0..paused_count {
+        add_app(
+            i,
+            InstalledAppInfoStatus::Paused {
+                reason: PausedAppReason::Error("Paused Error Reason".to_string()),
+            },
+        )
+    }
+
+    for i in 0..disabled_count {
+        add_app(
+            i,
+            InstalledAppInfoStatus::Disabled {
+                reason: DisabledAppReason::Error("Disabled Error Reason".to_string()),
+            },
+        )
+    }
+
+    hpos_apps
 }
 
 #[rocket::async_test]
@@ -148,13 +204,36 @@ async fn add_host_stats(pass_valid_signature: bool) {
 
     let _ = add_host_registration(host_registration, &client).await;
 
+    let mut paused_count = 0;
+    let mut running_count = 0;
+    let mut disabled_count = 0;
+
     let mut hpos_app_list = HashMap::new();
-    hpos_app_list.insert("uhCkk...appId.1".to_string(), AppStatusFilter::Running);
-    hpos_app_list.insert("uhCkk...appId2".to_string(), AppStatusFilter::Running);
-    hpos_app_list.insert("uhCkk...appId3".to_string(), AppStatusFilter::Running);
-    hpos_app_list.insert("uhCkk...appId4".to_string(), AppStatusFilter::Paused);
-    hpos_app_list.insert("uhCkk...appId5".to_string(), AppStatusFilter::Paused);
-    hpos_app_list.insert("uhCkk...appId6".to_string(), AppStatusFilter::Disabled);
+    let hpos_happs_mock = gen_mock_apps(3, 2, 1);
+
+    hpos_happs_mock.iter().for_each(|happ| {
+        let happ_status = match &happ.status {
+            InstalledAppInfoStatus::Paused { .. } => {
+                paused_count += 1;
+                AppStatusFilter::Paused
+            }
+            InstalledAppInfoStatus::Disabled { .. } => {
+                disabled_count += 1;
+                AppStatusFilter::Disabled
+            }
+            InstalledAppInfoStatus::Running => {
+                running_count += 1;
+                AppStatusFilter::Running
+            }
+        };
+        hpos_app_list.insert(happ.installed_app_id.clone(), happ_status);
+    });
+
+    // Test hpos_app_list count and status:
+    assert_eq!(hpos_app_list.len(), 6);
+    assert_eq!(disabled_count, 1);
+    assert_eq!(paused_count, 2);
+    assert_eq!(running_count, 3);
 
     // Create payload, sign payload, and call `/host/stats` endpoint, passing valid signature within call header
     let payload = HostStats {
@@ -176,6 +255,7 @@ async fn add_host_stats(pass_valid_signature: bool) {
         signature = sign_payload(&payload).await.unwrap();
         status = Status::Ok;
     } else {
+        // Provide a valid signature signed with incorrect keys to test unauth'd case
         signature =
             "oAcrxO0Xn2/Rub7BsNLgYRE1Km8Hn/+eWeYf2hpFziQ3qRRzwOEdEm+L9UvZK6FDLJf//BNPQrrTAZW0X6doAw"
                 .to_string();
