@@ -202,7 +202,7 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "channelVersion": hs.channel_version,
         "holoportVersion": hs.holoport_version,
     };
-    match hp_status.insert_one(val.clone(), None).await {
+    match hp_status.insert_one(val, None).await {
         Ok(_) => Ok(()),
         Err(e) => Err(ApiError::Database(Debug(e))),
     }
