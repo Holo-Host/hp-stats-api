@@ -237,16 +237,10 @@ async fn add_host_stats(pass_valid_signature: bool) {
 
     // Create payload, sign payload, and call `/host/stats` endpoint, passing valid signature within call header
     let payload = HostStats {
-        holo_network: None,
-        channel: None,
-        holoport_model: None,
-        ssh_status: None,
-        zt_ip: None,
-        wan_ip: None,
         // Note: The `holoport_id` must be the base_36 encoded version of the `host_registration.registration_code[i].agent_pub_keys[i].pub_key`
         holoport_id: "1h2di6px7otkjwudmycadu5teaywao46jelpegg7jujncbcbzs".to_string(),
-        timestamp: None,
         hpos_app_list: Some(hpos_app_list),
+        ..Default::default()
     };
 
     let signature;
