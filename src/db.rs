@@ -267,18 +267,11 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
 
     // Add utc timestamp to stats payload and insert into db
     let holoport_status = HostStats {
-        holo_network: stats.holo_network,
-        channel: stats.channel,
-        holoport_model: stats.holoport_model,
-        ssh_status: stats.ssh_status,
-        zt_ip: stats.zt_ip,
-        wan_ip: stats.wan_ip,
-        holoport_id: stats.holoport_id,
         timestamp: SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .ok()
             .map(|t| i64::try_from(t.as_secs()).ok().unwrap_or(0)),
-        hpos_app_list: stats.hpos_app_list,
+        ..stats
     };
     add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())
