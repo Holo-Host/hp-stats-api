@@ -111,7 +111,7 @@ pub struct Assignment {
 
 // Input type for /hosts/stats endpoint
 // Data schema in collection `holoport_status`
-// Note: We wrap each feild value in Option<T> because if the HPOS `netstatd` fails to collect data, it will send null in failed field.
+// Note: We wrap each field value in Option<T> because if the HPOS `netstatd` fails to collect data, it will send null in failed field.
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
