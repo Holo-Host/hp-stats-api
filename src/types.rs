@@ -125,6 +125,8 @@ pub struct HostStats {
     pub holoport_id: String,
     pub timestamp: Option<i64>,
     pub hpos_app_list: Option<HashMap<InstalledAppId, AppStatusFilter>>,
+    pub channel_version: Option<String>,
+    pub holoport_version: Option<String>,
 }
 
 #[rocket::async_trait]
