@@ -123,6 +123,8 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "wanIp": {"$first": "$wanIp"},
                 "timestamp": {"$first": "$timestamp"},
                 "hposAppList": {"$first": "$hposAppList"},
+                "channelVersion": {"$first": "$channelVersion"},
+                "hposVersion": {"$first": "$hposVersion"},
             }
         },
         doc! {
@@ -137,6 +139,8 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "wanIp": "$wanIp",
                 "timestamp":"$timestamp",
                 "hposAppList": "$hposAppList",
+                "channelVersion": "$channelVersion",
+                "hposVersion": "$hposVersion",
               }
         },
     ];
