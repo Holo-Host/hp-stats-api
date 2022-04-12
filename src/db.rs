@@ -200,7 +200,7 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "timestamp": hs.timestamp,
         "hposAppList": hpos_app_list,
         "channelVersion": hs.channel_version,
-        "holoportVersion": hs.holoport_version,
+        "hposVersion": hs.hpos_version,
     };
     match hp_status.insert_one(val, None).await {
         Ok(_) => Ok(()),
