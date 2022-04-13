@@ -80,14 +80,16 @@ POST
 payload:
 ```json
 {
-  "holoNetwork": <string>  # can be one of devNet, alphaNet, flexNet...
-  "channel" : <string>     # nix-channel that HPOS is following
-  "holoportModel": <string> # HP or HP+
-  "sshStatus": <bool>      # is SSH enabled?
-  "ztIp": <string>         # IP address on Zerotier network
-  "wanIp": <string>        # IPv4 address on internet
-  "holoportId": <string>   # base36 encoded public key of the host
-  "timestamp": <string>    # updated on API server
+  "holoNetwork":    <string>  # can be one of devNet, alphaNet, flexNet...
+  "channel" :       <string>  # nix-channel that HPOS is following
+  "holoportModel":  <string>  # HP or HP+
+  "sshStatus":      <bool>    # is SSH enabled?
+  "ztIp":           <string>  # IP address on Zerotier network
+  "wanIp":          <string>  # IPv4 address on internet
+  "holoportId":     <string>  # base36 encoded public key of the host
+  "timestamp":      <string>  # updated on API server
+  "hposVersion":    <string>  # the git revision channel that HPOS has downloaded
+  "channelVersion": <string>  # the git revision that HPOS is currently running
 }
 ```
 

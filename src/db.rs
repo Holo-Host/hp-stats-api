@@ -123,6 +123,8 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "wanIp": {"$first": "$wanIp"},
                 "timestamp": {"$first": "$timestamp"},
                 "hposAppList": {"$first": "$hposAppList"},
+                "channelVersion": {"$first": "$channelVersion"},
+                "hposVersion": {"$first": "$hposVersion"},
             }
         },
         doc! {
@@ -137,6 +139,8 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
                 "wanIp": "$wanIp",
                 "timestamp":"$timestamp",
                 "hposAppList": "$hposAppList",
+                "channelVersion": "$channelVersion",
+                "hposVersion": "$hposVersion",
               }
         },
     ];
@@ -199,8 +203,10 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "holoportId": hs.holoport_id,
         "timestamp": hs.timestamp,
         "hposAppList": hpos_app_list,
+        "channelVersion": hs.channel_version,
+        "hposVersion": hs.hpos_version,
     };
-    match hp_status.insert_one(val.clone(), None).await {
+    match hp_status.insert_one(val, None).await {
         Ok(_) => Ok(()),
         Err(e) => Err(ApiError::Database(Debug(e))),
     }
@@ -267,18 +273,11 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
 
     // Add utc timestamp to stats payload and insert into db
     let holoport_status = HostStats {
-        holo_network: stats.holo_network,
-        channel: stats.channel,
-        holoport_model: stats.holoport_model,
-        ssh_status: stats.ssh_status,
-        zt_ip: stats.zt_ip,
-        wan_ip: stats.wan_ip,
-        holoport_id: stats.holoport_id,
         timestamp: SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .ok()
             .map(|t| i64::try_from(t.as_secs()).ok().unwrap_or(0)),
-        hpos_app_list: stats.hpos_app_list,
+        ..stats
     };
     add_holoport_status(holoport_status, &pool.mongo).await?;
     Ok(())

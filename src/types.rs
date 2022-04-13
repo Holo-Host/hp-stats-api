@@ -111,8 +111,8 @@ pub struct Assignment {
 
 // Input type for /hosts/stats endpoint
 // Data schema in collection `holoport_status`
-// Note: We wrap each feild value in Option<T> because if the HPOS `netstatd` fails to collect data, it will send null in failed field.
-#[derive(Serialize, Deserialize, Clone)]
+// Note: We wrap each field value in Option<T> because if the HPOS `netstatd` fails to collect data, it will send null in failed field.
+#[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostStats {
@@ -125,6 +125,8 @@ pub struct HostStats {
     pub holoport_id: String,
     pub timestamp: Option<i64>,
     pub hpos_app_list: Option<HashMap<InstalledAppId, AppStatusFilter>>,
+    pub channel_version: Option<String>,
+    pub hpos_version: Option<String>,
 }
 
 #[rocket::async_trait]
