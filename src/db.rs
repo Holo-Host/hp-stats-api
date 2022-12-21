@@ -100,9 +100,8 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
 
     let pipeline = vec![
         doc! {
-            // only successful ssh results in last <cutoff> days
+            // get entries within last <cutoff> days
             "$match": {
-                "sshStatus": true,
                 "timestamp": {"$gte": cutoff_ms}
             }
         },
@@ -113,6 +112,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
             }
         },
         doc! {
+            // Group by holoport ID and return first (the most recent) record
             "$group": {
                 "_id": "$holoportId",
                 "holoNetwork": {"$first": "$holoNetwork"},
@@ -128,6 +128,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
             }
         },
         doc! {
+            // Rename key _id to holoportId
             "$project": {
                 "_id": 0,
                 "holoportId": "$_id",
