@@ -109,8 +109,29 @@ pub struct Assignment {
     pub name: String,
 }
 
+// Return type for /list-available endpoint
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct HostInfo {
+    pub zerotier_ip: Option<String>,
+    pub wan_ip: Option<String>,
+    pub last_zerotier_online: Option<i64>,
+    pub last_netstatsd_reported: Option<i64>,
+    pub holoport_id: Option<String>,
+    pub registered_email: Option<String>,
+    pub holo_network: Option<String>,
+    pub channel: Option<String>,
+    pub holoport_model: Option<String>,
+    pub ssh_status: Option<bool>,
+    pub hpos_app_list: Option<HashMap<InstalledAppId, AppStatusFilter>>,
+    pub channel_version: Option<String>,
+    pub hpos_version: Option<String>,
+    pub errors: Vec<String>,
+}
+
 // Input type for /hosts/stats endpoint
-// Data schema in collection `holoport_status`
+// Data schema in collection `host_statistics.holoport_status`
 // Note: We wrap each field value in Option<T> because if the HPOS `netstatd` fails to collect data, it will send null in failed field.
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(crate = "rocket::serde")]
@@ -194,6 +215,19 @@ impl<'r> FromData<'r> for HostStats {
             )),
         ))
     }
+}
+
+// Data schema of records retrieved from collection `host_statistics.latest_raw_snap`
+// Note - we are collecting only a subset of oryginal fields
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ZerotierMember {
+    pub last_online: i64,
+    pub zerotier_ip: Option<String>,
+    pub physical_address: Option<String>,
+    pub name: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]

@@ -4,7 +4,10 @@ use rocket::{self, get, post, State};
 
 mod db;
 mod types;
-use types::{ApiError, Capacity, HostStats, Result, Uptime};
+mod handlers;
+
+use handlers::list_available_hosts;
+use types::{ApiError, Capacity, HostInfo, HostStats, Result, Uptime};
 
 #[cfg(test)]
 mod test;
@@ -26,8 +29,12 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
 async fn list_available(
     days: u64,
     pool: &State<db::AppDbPool>,
-) -> Result<Json<Vec<HostStats>>, ApiError> {
-    Ok(Json(db::list_available_hosts(&pool.mongo, days).await?))
+) -> Result<Json<Vec<HostInfo>>, ApiError> {
+    // TODO: return BAD_REQUEST if days not passed
+    let hosts = db::get_hosts_stats(&pool.mongo, days).await?;
+    let members = db::get_zerotier_members(&pool.mongo).await?;
+
+    Ok(Json(list_available_hosts(hosts, members).await?))
 }
 
 #[get("/capacity")]
