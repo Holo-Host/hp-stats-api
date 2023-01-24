@@ -110,7 +110,7 @@ pub struct Assignment {
 }
 
 // Return type for /list-available endpoint
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Eq)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostInfo {
@@ -128,6 +128,36 @@ pub struct HostInfo {
     pub channel_version: Option<String>,
     pub hpos_version: Option<String>,
     pub errors: Vec<String>,
+}
+
+impl PartialEq for HostInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.zerotier_ip == other.zerotier_ip
+            && self.wan_ip == other.wan_ip
+            && self.last_zerotier_online == other.last_zerotier_online
+            && self.last_netstatsd_reported == other.last_netstatsd_reported
+            && self.holoport_id == other.holoport_id
+            && self.registered_email == other.registered_email
+            && self.holo_network == other.holo_network
+            && self.channel == other.channel
+            && self.holoport_model == other.holoport_model
+            && self.ssh_status == other.ssh_status
+            && is_hashmap_equal(&self.hpos_app_list, &other.hpos_app_list)
+            && self.channel_version == other.channel_version
+            && self.hpos_version == other.hpos_version
+            && self.errors == other.errors
+    }
+}
+
+fn is_hashmap_equal(
+    first: &Option<HashMap<InstalledAppId, AppStatusFilter>>,
+    second: &Option<HashMap<InstalledAppId, AppStatusFilter>>,
+) -> bool {
+    match (first, second) {
+        (None, None) => true,
+        (Some(first_map), Some(second_map)) => true,
+        _ => false,
+    }
 }
 
 // Input type for /hosts/stats endpoint

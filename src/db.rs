@@ -12,8 +12,8 @@ use ed25519_dalek::PublicKey;
 use hpos_config_core::public_key::to_holochain_encoded_agent_key;
 
 use crate::types::{
-    ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance,
-    Result, Uptime, ZerotierMember,
+    ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance, Result,
+    Uptime, ZerotierMember,
 };
 
 const DAYS_TOO_LARGE: Error400 =

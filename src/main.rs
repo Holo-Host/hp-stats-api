@@ -3,8 +3,8 @@ use rocket::*;
 use rocket::{self, get, post, State};
 
 mod db;
-mod types;
 mod handlers;
+mod types;
 
 use handlers::list_available_hosts;
 use types::{ApiError, Capacity, HostInfo, HostStats, Result, Uptime};
