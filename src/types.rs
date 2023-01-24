@@ -149,15 +149,26 @@ impl PartialEq for HostInfo {
     }
 }
 
+/// Checks if two HashMaps<InstalledAppId, AppStatusFilter> are
+/// equal. This check is perpormed only for keys, because values are of a type
+/// AppStatusFilter which does not implement Partial_eq nor Eq trait, which makes it
+/// impossible to compare values. Buuuuu.
 fn is_hashmap_equal(
     first: &Option<HashMap<InstalledAppId, AppStatusFilter>>,
     second: &Option<HashMap<InstalledAppId, AppStatusFilter>>,
 ) -> bool {
     match (first, second) {
         (None, None) => true,
-        (Some(first_map), Some(second_map)) => true,
+        (Some(first_map), Some(second_map)) => keys_match(first_map, second_map),
         _ => false,
     }
+}
+
+fn keys_match(
+    map1: &HashMap<InstalledAppId, AppStatusFilter>,
+    map2: &HashMap<InstalledAppId, AppStatusFilter>,
+) -> bool {
+    map1.len() == map2.len() && map1.keys().all(|k| map2.contains_key(k))
 }
 
 // Input type for /hosts/stats endpoint

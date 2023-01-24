@@ -32,24 +32,22 @@ async fn host_found_with_no_errors() {
         description: Some("beno@email.qq".into()),
     });
 
-    let expected_result = vec![
-        HostInfo {
-            zerotier_ip: Some("172.26.215.30".into()),
-            wan_ip: Some("8.12.11.123".into()),
-            last_zerotier_online: Some(123456678899),
-            last_netstatsd_reported: Some(12345678910),
-            holoport_id: Some("5zvezgwyz5robqc9s20n9655be0ot9vxmgqwm8g4iy5ite9a4".into()),
-            registered_email: Some("beno@email.qq".into()),
-            holo_network: Some("mainNet".into()),
-            channel: Some("master".into()),
-            holoport_model: Some("holoportPlus".into()),
-            ssh_status: Some(true),
-            hpos_app_list: Some(HashMap::new()),
-            channel_version: Some("89ec8aaef697b4741e6f0cefc4a9f8e7cc1e18dd".into()),
-            hpos_version: Some("89ec8aaef697b4741e6f0cefc4a9f8e7cc1e18dd".into()),
-            errors: vec![],
-        },
-    ];
+    let expected_result = vec![HostInfo {
+        zerotier_ip: Some("172.26.215.30".into()),
+        wan_ip: Some("8.12.11.123".into()),
+        last_zerotier_online: Some(123456678899),
+        last_netstatsd_reported: Some(12345678910),
+        holoport_id: Some("5zvezgwyz5robqc9s20n9655be0ot9vxmgqwm8g4iy5ite9a4".into()),
+        registered_email: Some("beno@email.qq".into()),
+        holo_network: Some("mainNet".into()),
+        channel: Some("master".into()),
+        holoport_model: Some("holoportPlus".into()),
+        ssh_status: Some(true),
+        hpos_app_list: Some(HashMap::new()),
+        channel_version: Some("89ec8aaef697b4741e6f0cefc4a9f8e7cc1e18dd".into()),
+        hpos_version: Some("89ec8aaef697b4741e6f0cefc4a9f8e7cc1e18dd".into()),
+        errors: vec![],
+    }];
 
     let result = list_available_hosts(hosts, members).await.unwrap();
 
