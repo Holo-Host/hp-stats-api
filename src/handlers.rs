@@ -78,7 +78,7 @@ fn zero_to_none(num: i64) -> Option<i64> {
 }
 
 /// Finds in `hosts` a host with `zerotier_ip` and once found removes it from `hosts`. If none found returns empty `HostStats`.
-/// Sets an error in an `errors` if `zerotier_ip` is `None`
+/// Sets an `errors` if `zerotier_ip` is `None`
 fn find_in_hosts(
     hosts: &mut Vec<HostStats>,
     zerotier_ip: &Option<String>,
@@ -109,6 +109,9 @@ fn resolve_holoport_id(
     zerotier_name: Option<String>,
     errors: &mut Vec<String>,
 ) -> Option<String> {
+    if holoport_id.is_empty() {
+        return None;
+    }
     if zerotier_name.is_none() || Some(holoport_id.clone()) != zerotier_name {
         errors.push(format!(
             "Mismatched holoport ID between data from zerotier ({:?}) and netstatsd ({:?})",
