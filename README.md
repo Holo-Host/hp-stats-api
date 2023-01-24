@@ -14,22 +14,27 @@ GET
 
 days = Cut off time. Records older than this will be ignored.
 
+This endpoint returns all the holoports on the holo network as seen by both zerotier network controller and Holoport's netstatsd. Data from both sources is merged and analyzed for possible errors. All the errors are reported in form of an array under field `errors`.
+
 #### `200 OK`
 
 ```json
 [
   {
-    "_id": "string",
-    "IP": "string",
-    "timestamp": 0,
-    "sshSuccess": true,
-    "holoNetwork": "string",
-    "channel": "string",
-    "holoportModel": "string",
-    "hostingInfo": "string",
-    "error": "string",
-    "alphaProgram": true,
-    "assignedTo": "string"
+    "zerotier_ip": "172.26.215.31",                                     # IP address on Zerotier network
+    "wan_ip": "77.12.0.3",                                              # IPv4 address on internet
+    "last_zerotier_online": 123456678810,                               # timestamp of the last contact of the host with Zerotier network controller
+    "last_netstatsd_reported": 123456678834,                            # timestamp of the last update from netstatsd
+    "holoport_id": "5zvezgwyz5robqc9s20n9655be0ot9vxmgqwm8g4iy5ite9a4", # base36 encoded public key of the host
+    "registered_email": "alex@email.qq",                                # email address used at registration
+    "holo_network": "devNet",                                           # can be one of devNet, alphaNet, flexNet...
+    "channel": "develop",                                               # nix-channel that HPOS is following
+    "holoport_model": "holoport",                                       # HP or HP+
+    "ssh_status": true,                                                 # is SSH enabled?
+    "hpos_app_list": [],                                                # list of hosted happs as reported by netstatsd
+    "channel_version": "89ec8aaef697b4741e6f0cefc4a9f8e7cc1e18dd",      # the git revision that HPOS is currently running
+    "hpos_version": "89ec8aaef697b4741e6f0cefc4a9f8e7cc1e18dd",         # the git revision channel that HPOS has downloaded
+    "errors": []
   }
 ]
 ```
