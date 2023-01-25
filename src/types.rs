@@ -110,7 +110,7 @@ pub struct Assignment {
 }
 
 // Return type for /list-available endpoint
-#[derive(Serialize, Deserialize, Debug, Eq)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "rocket::serde")]
 #[serde(rename_all = "camelCase")]
 pub struct HostInfo {
