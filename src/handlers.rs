@@ -63,7 +63,7 @@ fn merge_host_info(mut hosts: Vec<HostStats>, mut members: Vec<ZerotierMember>) 
             hpos_app_list: host.hpos_app_list,
             channel_version: host.channel_version,
             hpos_version: host.hpos_version,
-            errors: vec![format!("This host reported its zerotier IP as {} but Zerotier Central has no knowledge of it", host.zt_ip.unwrap_or("None".into()))],
+            errors: vec![format!("Netstatsd reported zerotier IP as {} but Zerotier Central has no knowledge of it", host.zt_ip.unwrap_or("None".into()))],
         });
     }
 
@@ -95,8 +95,8 @@ fn find_in_hosts(
         return hosts.swap_remove(index);
     } else {
         errors.push(format!(
-        "None of the holoports reporting to host_statistics.holoport_status has zerotier ip {:?}",
-        zerotier_ip
+        "IP {} is listed on Zerotier as active, but none fo the holoports reports that way via netstatsd",
+        zerotier_ip.as_ref().unwrap_or(&"???".to_string())
     ));
         HostStats::default()
     }
@@ -114,8 +114,8 @@ fn resolve_holoport_id(
     }
     if zerotier_name.is_none() || Some(holoport_id.clone()) != zerotier_name {
         errors.push(format!(
-            "Mismatched holoport ID between data from zerotier ({:?}) and netstatsd ({:?})",
-            zerotier_name, &holoport_id
+            "Mismatched holoport ID between data from zerotier ({}) and netstatsd ({})",
+            zerotier_name.unwrap_or("???".into()), &holoport_id
         ));
     }
 
