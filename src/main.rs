@@ -44,7 +44,7 @@ async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
 
 #[post("/stats", format = "application/json", data = "<stats>")]
 async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(), ApiError> {
-    Ok(db::add_host_stats(stats, &pool).await?)
+    db::add_host_stats(stats, pool).await
 }
 
 #[launch]

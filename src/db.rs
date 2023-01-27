@@ -41,7 +41,7 @@ pub async fn ping_database(db: &Client) -> Result<String> {
     db.database("host_statistics")
         .run_command(doc! {"ping": 1}, None)
         .await?;
-    Ok(format!("Connected to db. v0.0.2"))
+    Ok("Connected to db. v0.0.2".to_string())
 }
 
 // Find a value of uptime for host identified by its name in a collection `performance_summary`
@@ -305,11 +305,11 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
     // Confirm host exists in registration records
     let _ = verify_host(to_holochain_encoded_agent_key(&ed25519_pubkey), &pool.mongo)
         .await
-        .or_else(|e| {
-            return Err(ApiError::MissingRecord(Error404::Info(format!(
+        .map_err(|e| {
+            ApiError::MissingRecord(Error404::Info(format!(
                 "Provided host's holoport_id is not registered among valid hosts.  Error: {:?}",
                 e
-            ))));
+            )))
         });
 
     // Add utc timestamp to stats payload and insert into db

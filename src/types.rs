@@ -1,4 +1,3 @@
-use base64;
 use ed25519_dalek::Signature;
 use rocket::data::{self, Data, FromData};
 use rocket::http::{Method, Status};
