@@ -95,7 +95,7 @@ async fn host_found_mismatched_names() {
             hpos_app_list: Some(HashMap::new()),
             channel_version: Some("89ec8aaef697b4741e6f0cefc4a9f8e7aaaaaaa".into()),
             hpos_version: Some("89ec8aaef697b4741e6f0cefc4a9f8e7aaaaaab".into()),
-            errors: vec!["Mismatched holoport ID between data from zerotier (Some(\"5zvezgwyz5robqc9s20n9655be0ot9vxmgqwm8g4iy5ite9a4\")) and netstatsd (\"6avezgwyz5robqc9s20n9655be0ot9vxmgqwm8g4iy58g4iy5\")".into()],
+            errors: vec!["Mismatched holoport ID between data from zerotier (5zvezgwyz5robqc9s20n9655be0ot9vxmgqwm8g4iy5ite9a4) and netstatsd (6avezgwyz5robqc9s20n9655be0ot9vxmgqwm8g4iy58g4iy5)".into()],
         },
     ];
 
@@ -133,7 +133,7 @@ async fn host_not_found() {
             channel_version: None,
             hpos_version: None,
             errors: vec![
-              "None of the holoports reporting to host_statistics.holoport_status has zerotier ip Some(\"172.26.215.31\")".to_string()
+              "IP 172.26.215.31 is listed on Zerotier as active, but none fo the holoports reports that way via netstatsd".to_string()
             ],
         },
     ];
@@ -177,7 +177,7 @@ async fn zt_member_not_found() {
             hpos_app_list: Some(HashMap::new()),
             channel_version: Some("89ec8aaef697b4741e6f0cefc4a9f8e7aaaaaaa".into()),
             hpos_version: Some("89ec8aaef697b4741e6f0cefc4a9f8e7aaaaaab".into()),
-            errors: vec!["This host reported its zerotier IP as 172.26.215.31 but Zerotier Central has no knowledge of it".into()],
+            errors: vec!["Netstatsd reported zerotier IP as 172.26.215.31 but Zerotier Central has no knowledge of it".into()],
         },
     ];
 
