@@ -45,12 +45,12 @@ pub async fn ping_database(db: &Client) -> Result<String> {
 }
 
 // Delete from host_statistics.holoport_status documents with
-// timestamp field older than 60 days. Used for database cleanup
+// timestamp field older than 30 days. Used for database cleanup
 pub async fn cleanup_database(db: &Client) -> Result<String, ApiError> {
     let hp_status: Collection<HostStats> =
         db.database("host_statistics").collection("holoport_status");
 
-    let cutoff_ms = match get_cutoff_timestamp(60) {
+    let cutoff_ms = match get_cutoff_timestamp(30) {
         Some(x) => x,
         None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
     };

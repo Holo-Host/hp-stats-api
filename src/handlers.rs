@@ -96,7 +96,7 @@ fn find_in_hosts(
         hosts.swap_remove(index)
     } else {
         errors.push(format!(
-        "IP {} is listed on Zerotier as active, but none fo the holoports reports that way via netstatsd",
+        "IP {} is listed in Zerotier Central as active, but no holoport reported this IP via netstatsd within queried timeframe",
         zerotier_ip.as_ref().unwrap_or(&"???".to_string())
     ));
         HostStats::default()

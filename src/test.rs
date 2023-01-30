@@ -133,7 +133,7 @@ async fn host_not_found() {
             channel_version: None,
             hpos_version: None,
             errors: vec![
-              "IP 172.26.215.31 is listed on Zerotier as active, but none fo the holoports reports that way via netstatsd".to_string()
+              "IP 172.26.215.31 is listed in Zerotier Central as active, but no holoport reported this IP via netstatsd within queried timeframe".to_string()
             ],
         },
     ];
