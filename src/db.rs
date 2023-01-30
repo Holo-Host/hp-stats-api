@@ -62,7 +62,10 @@ pub async fn cleanup_database(db: &Client) -> Result<String, ApiError> {
     };
 
     match hp_status.delete_many(val, None).await {
-        Ok(res) => Ok(format!("Deleted {} documents from holoport_status collection", res.deleted_count)),
+        Ok(res) => Ok(format!(
+            "Deleted {} documents from holoport_status collection",
+            res.deleted_count
+        )),
         Err(e) => Err(ApiError::Database(Debug(e))),
     }
 }
