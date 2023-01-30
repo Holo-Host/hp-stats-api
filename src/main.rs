@@ -17,6 +17,11 @@ async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
     db::ping_database(&pool.mongo).await
 }
 
+#[delete("/cleanup")]
+async fn cleanup(pool: &State<db::AppDbPool>) -> Result<String, ApiError> {
+    db::cleanup_database(&pool.mongo).await
+}
+
 #[get("/<name>/uptime")]
 async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json<Uptime>>> {
     if let Some(uptime) = db::host_uptime(name, &pool.mongo).await {
@@ -51,7 +56,7 @@ async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result
 async fn rocket() -> _ {
     rocket::build()
         .manage(db::init_db_pool().await)
-        .mount("/", rocket::routes![index])
+        .mount("/", rocket::routes![index, cleanup])
         .mount(
             "/hosts/",
             rocket::routes![uptime, list_available, add_host_stats],

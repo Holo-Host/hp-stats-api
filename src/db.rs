@@ -44,6 +44,29 @@ pub async fn ping_database(db: &Client) -> Result<String> {
     Ok("Connected to db. v0.0.2".to_string())
 }
 
+// Delete from host_statistics.holoport_status documents with
+// timestamp field older than 60 days. Used for database cleanup
+pub async fn cleanup_database(db: &Client) -> Result<String, ApiError> {
+    let hp_status: Collection<HostStats> =
+        db.database("host_statistics").collection("holoport_status");
+
+    let cutoff_ms = match get_cutoff_timestamp(60) {
+        Some(x) => x,
+        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
+    };
+
+    let val = doc! {
+        "timestamp": {
+          "$lt": cutoff_ms
+        }
+    };
+
+    match hp_status.delete_many(val, None).await {
+        Ok(res) => Ok(format!("Deleted {} documents", res.deleted_count)),
+        Err(e) => Err(ApiError::Database(Debug(e))),
+    }
+}
+
 // Find a value of uptime for host identified by its name in a collection `performance_summary`
 // Returns 404 if not found
 pub async fn host_uptime(name: String, db: &Client) -> Option<Uptime> {
