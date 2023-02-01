@@ -3,8 +3,11 @@ use rocket::*;
 use rocket::{self, get, post, State};
 
 mod db;
+mod handlers;
 mod types;
-use types::{ApiError, Capacity, HostStats, Result, Uptime};
+
+use handlers::list_available_hosts;
+use types::{ApiError, Capacity, HostInfo, HostStats, Result, Uptime};
 
 #[cfg(test)]
 mod test;
@@ -12,6 +15,11 @@ mod test;
 #[get("/")]
 async fn index(pool: &State<db::AppDbPool>) -> Result<String> {
     db::ping_database(&pool.mongo).await
+}
+
+#[delete("/cleanup")]
+async fn cleanup(pool: &State<db::AppDbPool>) -> Result<String, ApiError> {
+    db::cleanup_database(&pool.mongo).await
 }
 
 #[get("/<name>/uptime")]
@@ -26,8 +34,12 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
 async fn list_available(
     days: u64,
     pool: &State<db::AppDbPool>,
-) -> Result<Json<Vec<HostStats>>, ApiError> {
-    Ok(Json(db::list_available_hosts(&pool.mongo, days).await?))
+) -> Result<Json<Vec<HostInfo>>, ApiError> {
+    // TODO: return BAD_REQUEST if days not passed
+    let hosts = db::get_hosts_stats(&pool.mongo, days).await?;
+    let members = db::get_zerotier_members(&pool.mongo).await?;
+
+    Ok(Json(list_available_hosts(hosts, members).await?))
 }
 
 #[get("/capacity")]
@@ -37,14 +49,14 @@ async fn capacity(pool: &State<db::AppDbPool>) -> Result<Json<Capacity>> {
 
 #[post("/stats", format = "application/json", data = "<stats>")]
 async fn add_host_stats(stats: HostStats, pool: &State<db::AppDbPool>) -> Result<(), ApiError> {
-    Ok(db::add_host_stats(stats, &pool).await?)
+    db::add_host_stats(stats, pool).await
 }
 
 #[launch]
 async fn rocket() -> _ {
     rocket::build()
         .manage(db::init_db_pool().await)
-        .mount("/", rocket::routes![index])
+        .mount("/", rocket::routes![index, cleanup])
         .mount(
             "/hosts/",
             rocket::routes![uptime, list_available, add_host_stats],

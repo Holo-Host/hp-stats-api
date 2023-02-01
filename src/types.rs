@@ -1,4 +1,3 @@
-use base64;
 use ed25519_dalek::Signature;
 use rocket::data::{self, Data, FromData};
 use rocket::http::{Method, Status};
@@ -109,8 +108,70 @@ pub struct Assignment {
     pub name: String,
 }
 
+// Return type for /list-available endpoint
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct HostInfo {
+    pub zerotier_ip: Option<String>,
+    pub wan_ip: Option<String>,
+    pub last_zerotier_online: Option<i64>,
+    pub last_netstatsd_reported: Option<i64>,
+    pub holoport_id: Option<String>,
+    pub registered_email: Option<String>,
+    pub holo_network: Option<String>,
+    pub channel: Option<String>,
+    pub holoport_model: Option<String>,
+    pub ssh_status: Option<bool>,
+    pub hpos_app_list: Option<HashMap<InstalledAppId, AppStatusFilter>>,
+    pub channel_version: Option<String>,
+    pub hpos_version: Option<String>,
+    pub errors: Vec<String>,
+}
+
+impl PartialEq for HostInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.zerotier_ip == other.zerotier_ip
+            && self.wan_ip == other.wan_ip
+            && self.last_zerotier_online == other.last_zerotier_online
+            && self.last_netstatsd_reported == other.last_netstatsd_reported
+            && self.holoport_id == other.holoport_id
+            && self.registered_email == other.registered_email
+            && self.holo_network == other.holo_network
+            && self.channel == other.channel
+            && self.holoport_model == other.holoport_model
+            && self.ssh_status == other.ssh_status
+            && is_hashmap_equal(&self.hpos_app_list, &other.hpos_app_list)
+            && self.channel_version == other.channel_version
+            && self.hpos_version == other.hpos_version
+            && self.errors == other.errors
+    }
+}
+
+/// Checks if two HashMaps<InstalledAppId, AppStatusFilter> are
+/// equal. This check is perpormed only for keys, because values are of a type
+/// AppStatusFilter which does not implement Partial_eq nor Eq trait, which makes it
+/// impossible to compare values. Buuuuu.
+fn is_hashmap_equal(
+    first: &Option<HashMap<InstalledAppId, AppStatusFilter>>,
+    second: &Option<HashMap<InstalledAppId, AppStatusFilter>>,
+) -> bool {
+    match (first, second) {
+        (None, None) => true,
+        (Some(first_map), Some(second_map)) => keys_match(first_map, second_map),
+        _ => false,
+    }
+}
+
+fn keys_match(
+    map1: &HashMap<InstalledAppId, AppStatusFilter>,
+    map2: &HashMap<InstalledAppId, AppStatusFilter>,
+) -> bool {
+    map1.len() == map2.len() && map1.keys().all(|k| map2.contains_key(k))
+}
+
 // Input type for /hosts/stats endpoint
-// Data schema in collection `holoport_status`
+// Data schema in collection `host_statistics.holoport_status`
 // Note: We wrap each field value in Option<T> because if the HPOS `netstatd` fails to collect data, it will send null in failed field.
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(crate = "rocket::serde")]
@@ -194,6 +255,19 @@ impl<'r> FromData<'r> for HostStats {
             )),
         ))
     }
+}
+
+// Data schema of records retrieved from collection `host_statistics.latest_raw_snap`
+// Note - we are collecting only a subset of oryginal fields
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(crate = "rocket::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ZerotierMember {
+    pub last_online: i64,
+    pub zerotier_ip: Option<String>,
+    pub physical_address: Option<String>,
+    pub name: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]

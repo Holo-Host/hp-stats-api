@@ -13,7 +13,7 @@ use hpos_config_core::public_key::to_holochain_encoded_agent_key;
 
 use crate::types::{
     ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance, Result,
-    Uptime,
+    Uptime, ZerotierMember,
 };
 
 const DAYS_TOO_LARGE: Error400 =
@@ -41,7 +41,33 @@ pub async fn ping_database(db: &Client) -> Result<String> {
     db.database("host_statistics")
         .run_command(doc! {"ping": 1}, None)
         .await?;
-    Ok(format!("Connected to db. v0.0.2"))
+    Ok("Connected to db. v0.0.2".to_string())
+}
+
+// Delete from host_statistics.holoport_status documents with
+// timestamp field older than 30 days. Used for database cleanup
+pub async fn cleanup_database(db: &Client) -> Result<String, ApiError> {
+    let hp_status: Collection<HostStats> =
+        db.database("host_statistics").collection("holoport_status");
+
+    let cutoff_ms = match get_cutoff_timestamp(30) {
+        Some(x) => x,
+        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
+    };
+
+    let val = doc! {
+        "timestamp": {
+          "$lt": cutoff_ms
+        }
+    };
+
+    match hp_status.delete_many(val, None).await {
+        Ok(res) => Ok(format!(
+            "Deleted {} documents from holoport_status collection",
+            res.deleted_count
+        )),
+        Err(e) => Err(ApiError::Database(Debug(e))),
+    }
 }
 
 // Find a value of uptime for host identified by its name in a collection `performance_summary`
@@ -87,9 +113,49 @@ pub async fn network_capacity(db: &Client) -> Result<Capacity> {
         .map_err(Debug)
 }
 
-// Return the most recent record for hosts stored in `holoport_status` collection that have a successful SSH record
+pub async fn get_zerotier_members(db: &Client) -> Result<Vec<ZerotierMember>, ApiError> {
+    let zerotier_snapshot: Collection<ZerotierMember> =
+        db.database("host_statistics").collection("latest_raw_snap");
+
+    // Use aggregation pipeline to extract only relevant fields from database
+    let pipeline = vec![
+        doc! {
+            // get entries within last <cutoff> days
+            "$match": {
+              "config.authorized": true
+            }
+        },
+        doc! {
+            // Rename key _id to holoportId
+            "$project": {
+              "lastOnline": 1,
+              "zerotierIp": { "$first": "$config.ipAssignments" },
+              "physicalAddress": 1,
+              "name": 1,
+              "description": 1
+              }
+        },
+    ];
+
+    let options = AggregateOptions::builder().allow_disk_use(true).build();
+
+    let cursor = zerotier_snapshot
+        .aggregate(pipeline, Some(options))
+        .await
+        .map_err(Debug)
+        .map_err(ApiError::Database)?;
+
+    cursor
+        .try_filter_map(|member| async { Ok(Some(bson::from_document(member)?)) })
+        .try_collect()
+        .await
+        .map_err(Debug)
+        .map_err(ApiError::Database)
+}
+
+// Return the most recent record for hosts stored in `holoport_status` collection
 // Ignores records older than <cutoff> days
-pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostStats>, ApiError> {
+pub async fn get_hosts_stats(db: &Client, cutoff: u64) -> Result<Vec<HostStats>, ApiError> {
     let cutoff_ms = match get_cutoff_timestamp(cutoff) {
         Some(x) => x,
         None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
@@ -100,9 +166,8 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
 
     let pipeline = vec![
         doc! {
-            // only successful ssh results in last <cutoff> days
+            // get entries within last <cutoff> days
             "$match": {
-                "sshStatus": true,
                 "timestamp": {"$gte": cutoff_ms}
             }
         },
@@ -113,6 +178,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
             }
         },
         doc! {
+            // Group by holoport ID and return first (the most recent) record
             "$group": {
                 "_id": "$holoportId",
                 "holoNetwork": {"$first": "$holoNetwork"},
@@ -128,6 +194,7 @@ pub async fn list_available_hosts(db: &Client, cutoff: u64) -> Result<Vec<HostSt
             }
         },
         doc! {
+            // Rename key _id to holoportId
             "$project": {
                 "_id": 0,
                 "holoportId": "$_id",
@@ -213,8 +280,8 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
 }
 
 /// Ops Console DB:
-// Find registration values for host identified in the `opsconsoledb` collection `registration`
-// and determine whether the provided host pub key exists within record
+/// Find registration values for host identified in the `opsconsoledb` collection `registration`
+/// and determine whether the provided host pub key exists within record
 pub async fn verify_host(pub_key: String, db: &Client) -> Result<(), ApiError> {
     let records: Collection<HostRegistration> =
         db.database("opsconsoledb").collection("registrations");
@@ -264,11 +331,11 @@ pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result
     // Confirm host exists in registration records
     let _ = verify_host(to_holochain_encoded_agent_key(&ed25519_pubkey), &pool.mongo)
         .await
-        .or_else(|e| {
-            return Err(ApiError::MissingRecord(Error404::Info(format!(
+        .map_err(|e| {
+            ApiError::MissingRecord(Error404::Info(format!(
                 "Provided host's holoport_id is not registered among valid hosts.  Error: {:?}",
                 e
-            ))));
+            )))
         });
 
     // Add utc timestamp to stats payload and insert into db
