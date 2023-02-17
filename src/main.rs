@@ -30,13 +30,13 @@ async fn uptime(name: String, pool: &State<db::AppDbPool>) -> Result<Option<Json
     Ok(None)
 }
 
-#[get("/list-available?<days>")]
+#[get("/list-available?<hours>")]
 async fn list_available(
-    days: u64,
+    hours: u64,
     pool: &State<db::AppDbPool>,
 ) -> Result<Json<Vec<HostInfo>>, ApiError> {
     // TODO: return BAD_REQUEST if days not passed
-    let hosts = db::get_hosts_stats(&pool.mongo, days).await?;
+    let hosts = db::get_hosts_stats(&pool.mongo, hours).await?;
     let members = db::get_zerotier_members(&pool.mongo).await?;
 
     Ok(Json(list_available_hosts(hosts, members).await?))

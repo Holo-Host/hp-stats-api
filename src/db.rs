@@ -231,11 +231,11 @@ pub async fn get_hosts_stats(db: &Client, cutoff: u64) -> Result<Vec<HostStats>,
 // Helper function to get cutoff timestamp for filter
 // We use u64 for days because otherwise we have to recast as u64 in the function, and 4 bytes isn't a big deal here
 // Returns None if days is too large and causes negative timestamp (propagates .checked_sub() which does the same)
-fn get_cutoff_timestamp(days: u64) -> Option<i64> {
+fn get_cutoff_timestamp(hours: u64) -> Option<i64> {
     let current_timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("SystemTime should be after unix epoch");
-    let valid_duration = Duration::from_secs(60 * 60 * 24 * days);
+    let valid_duration = Duration::from_secs(60 * 60 * hours);
 
     let cutoff_timestamp = current_timestamp.checked_sub(valid_duration)?;
     use std::convert::TryInto;
