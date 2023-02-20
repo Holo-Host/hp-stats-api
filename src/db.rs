@@ -16,8 +16,8 @@ use crate::types::{
     Uptime, ZerotierMember,
 };
 
-const DAYS_TOO_LARGE: Error400 =
-    Error400::Message("Days specified is too large. Cutoff is earlier than start of unix epoch");
+const HOURS_TOO_LARGE: Error400 =
+    Error400::Message("Hours specified is too large. Cutoff is earlier than start of unix epoch");
 
 // AppDbPool is managed by Rocket as a State, which means it is available across threads.
 // Type mongodb::Database (starting v2.0.0 of mongodb driver) represents a connection pool to db,
@@ -50,9 +50,9 @@ pub async fn cleanup_database(db: &Client) -> Result<String, ApiError> {
     let hp_status: Collection<HostStats> =
         db.database("host_statistics").collection("holoport_status");
 
-    let cutoff_ms = match get_cutoff_timestamp(30) {
+    let cutoff_ms = match get_cutoff_timestamp(30 * 24) {
         Some(x) => x,
-        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
+        None => return Err(ApiError::BadRequest(HOURS_TOO_LARGE)),
     };
 
     let val = doc! {
@@ -120,7 +120,6 @@ pub async fn get_zerotier_members(db: &Client) -> Result<Vec<ZerotierMember>, Ap
     // Use aggregation pipeline to extract only relevant fields from database
     let pipeline = vec![
         doc! {
-            // get entries within last <cutoff> days
             "$match": {
               "config.authorized": true
             }
@@ -154,11 +153,11 @@ pub async fn get_zerotier_members(db: &Client) -> Result<Vec<ZerotierMember>, Ap
 }
 
 // Return the most recent record for hosts stored in `holoport_status` collection
-// Ignores records older than <cutoff> days
+// Ignores records older than <cutoff> hours
 pub async fn get_hosts_stats(db: &Client, cutoff: u64) -> Result<Vec<HostStats>, ApiError> {
     let cutoff_ms = match get_cutoff_timestamp(cutoff) {
         Some(x) => x,
-        None => return Err(ApiError::BadRequest(DAYS_TOO_LARGE)),
+        None => return Err(ApiError::BadRequest(HOURS_TOO_LARGE)),
     };
 
     let hp_status: Collection<HostStats> =
@@ -166,7 +165,7 @@ pub async fn get_hosts_stats(db: &Client, cutoff: u64) -> Result<Vec<HostStats>,
 
     let pipeline = vec![
         doc! {
-            // get entries within last <cutoff> days
+            // get entries within last <cutoff> hours
             "$match": {
                 "timestamp": {"$gte": cutoff_ms}
             }
@@ -229,13 +228,13 @@ pub async fn get_hosts_stats(db: &Client, cutoff: u64) -> Result<Vec<HostStats>,
 }
 
 // Helper function to get cutoff timestamp for filter
-// We use u64 for days because otherwise we have to recast as u64 in the function, and 4 bytes isn't a big deal here
-// Returns None if days is too large and causes negative timestamp (propagates .checked_sub() which does the same)
-fn get_cutoff_timestamp(days: u64) -> Option<i64> {
+// We use u64 for hours because otherwise we have to recast as u64 in the function, and 4 bytes isn't a big deal here
+// Returns None if hours is too large and causes negative timestamp (propagates .checked_sub() which does the same)
+fn get_cutoff_timestamp(hours: u64) -> Option<i64> {
     let current_timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("SystemTime should be after unix epoch");
-    let valid_duration = Duration::from_secs(60 * 60 * 24 * days);
+    let valid_duration = Duration::from_secs(60 * 60 * hours);
 
     let cutoff_timestamp = current_timestamp.checked_sub(valid_duration)?;
     use std::convert::TryInto;
