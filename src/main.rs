@@ -35,7 +35,7 @@ async fn list_available(
     hours: u64,
     pool: &State<db::AppDbPool>,
 ) -> Result<Json<Vec<HostInfo>>, ApiError> {
-    // TODO: return BAD_REQUEST if days not passed
+    // TODO: return BAD_REQUEST if hours not passed
     let hosts = db::get_hosts_stats(&pool.mongo, hours).await?;
     let members = db::get_zerotier_members(&pool.mongo).await?;
 

@@ -3,16 +3,21 @@ Public API for collecting and reading statistics on holoports and holo network
 
 Endpoints:
 
-#### GET `/`
+### GET `/`
+
+Gets status of connection to db.
 
 #### `200 OK`
 
-Text: status of connection to db
+### DELETE `/cleanup`
 
-GET
-`/hosts/list-available?days=7`
+Deletes from host_statistics.holoport_status documents with timestamp field older than 30 days.
 
-days = Cut off time. Records older than this will be ignored.
+#### `200 OK`
+
+### GET `/hosts/list-available?hours=7`
+
+hours = Cut off time. Records older than this will be ignored.
 
 This endpoint returns all the holoports on the holo network as seen by both zerotier network controller and Holoport's netstatsd. Data from both sources is merged and analyzed for possible errors. All the errors are reported in form of an array under field `errors`.
 
@@ -39,24 +44,7 @@ This endpoint returns all the holoports on the holo network as seen by both zero
 ]
 ```
 
-GET
-`/hosts/registered?days=7`
-
-days = Cut off time. Records older than this will be ignored.
-
-#### `200 OK`
-
-```json
-[
-  "holoport_id_1",
-  "holoport_id_2",
-  "holoport_id_3",
-  "holoport_id_4"
-]
-```
-
-GET
-`/hosts/<name>/uptime`
+### GET `/hosts/<name>/uptime`
 
 #### `200 OK`
 
@@ -66,8 +54,7 @@ GET
 }
 ```
 
-GET
-`/network/capacity`
+### GET `/network/capacity`
 
 #### `200 OK`
 
@@ -79,8 +66,7 @@ GET
 }
 ```
 
-POST
-`/hosts/stats`
+### POST `/hosts/stats`
 
 payload:
 ```json
