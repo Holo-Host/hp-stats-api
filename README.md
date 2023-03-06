@@ -1,7 +1,13 @@
 # hp-stats-api
 Public API for collecting and reading statistics on holoports and holo network
 
-Endpoints:
+## Ownership Info
+Codeowner: @jettech
+Consulted: @peeech
+Informed: None
+
+
+## Endpoints:
 
 ### GET `/`
 
