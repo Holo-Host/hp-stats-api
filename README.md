@@ -2,7 +2,7 @@
 Public API for collecting and reading statistics on holoports and holo network
 
 ## Ownership Info
-Codeowner: @jettech
+Codeowner: @jetttech
 Consulted: @peeech
 Informed: None
 
