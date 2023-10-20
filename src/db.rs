@@ -1,4 +1,4 @@
-use mongodb::bson::{self, doc, Document};
+use mongodb::bson::{self, doc, DateTime, Document};
 use mongodb::options::AggregateOptions;
 use mongodb::{Client, Collection};
 use rocket::futures::TryStreamExt;
@@ -45,12 +45,12 @@ pub async fn ping_database(db: &Client) -> Result<String> {
 }
 
 // Delete from host_statistics.holoport_status documents with
-// timestamp field older than 30 days. Used for database cleanup
+// timestamp field older than 14 days. Used for database cleanup
 pub async fn cleanup_database(db: &Client) -> Result<String, ApiError> {
     let hp_status: Collection<HostStats> =
         db.database("host_statistics").collection("holoport_status");
 
-    let cutoff_ms = match get_cutoff_timestamp(30 * 24) {
+    let cutoff_ms = match get_cutoff_timestamp(14 * 24) {
         Some(x) => x,
         None => return Err(ApiError::BadRequest(HOURS_TOO_LARGE)),
     };
@@ -271,6 +271,7 @@ pub async fn add_holoport_status(hs: HostStats, db: &Client) -> Result<(), ApiEr
         "hposAppList": hpos_app_list,
         "channelVersion": hs.channel_version,
         "hposVersion": hs.hpos_version,
+        "dateCreated": DateTime::now(), // Field of bson type Date required for TTL index
     };
     match hp_status.insert_one(val, None).await {
         Ok(_) => Ok(()),
