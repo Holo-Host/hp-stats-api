@@ -1,4 +1,4 @@
-use mongodb::bson::{self, doc, Document, DateTime};
+use mongodb::bson::{self, doc, DateTime, Document};
 use mongodb::options::AggregateOptions;
 use mongodb::{Client, Collection};
 use rocket::futures::TryStreamExt;
