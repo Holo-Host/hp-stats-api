@@ -8,6 +8,7 @@ use rocket::{
     serde::{Deserialize, Serialize},
 };
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 use holochain_conductor_api::AppStatusFilter;
 use holochain_types::app::InstalledAppId;
@@ -234,7 +235,7 @@ impl<'r> FromData<'r> for HostStats {
                     ));
                 }
             };
-            let ed25519_sig = Signature::from_bytes(&decoded_sig).unwrap();
+            let ed25519_sig = Signature::from_bytes(&decoded_sig.try_into().unwrap());
 
             let ed25519_pubkey = db::decode_pubkey(&host_stats.holoport_id);
 
