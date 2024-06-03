@@ -1,15 +1,14 @@
+use ed25519_dalek::VerifyingKey;
+use hpos_config_core::public_key::to_holochain_encoded_agent_key;
 use mongodb::bson::{self, doc, DateTime, Document};
 use mongodb::options::AggregateOptions;
 use mongodb::{Client, Collection};
 use rocket::futures::TryStreamExt;
 use rocket::response::Debug;
 use rocket::State;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::env::var;
 use std::time::{Duration, SystemTime};
-
-use ed25519_dalek::PublicKey;
-use hpos_config_core::public_key::to_holochain_encoded_agent_key;
 
 use crate::types::{
     ApiError, Capacity, Error400, Error404, HostRegistration, HostStats, Performance, Result,
@@ -320,9 +319,9 @@ pub async fn verify_host(pub_key: String, db: &Client) -> Result<(), ApiError> {
     ))))
 }
 
-pub fn decode_pubkey(holoport_id: &str) -> PublicKey {
+pub fn decode_pubkey(holoport_id: &str) -> VerifyingKey {
     let decoded_pubkey = base36::decode(holoport_id).unwrap();
-    PublicKey::from_bytes(&decoded_pubkey).unwrap()
+    VerifyingKey::from_bytes(&decoded_pubkey.try_into().unwrap()).unwrap()
 }
 
 pub async fn add_host_stats(stats: HostStats, pool: &State<AppDbPool>) -> Result<(), ApiError> {
